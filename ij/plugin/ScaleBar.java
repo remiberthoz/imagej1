@@ -38,9 +38,13 @@ public class ScaleBar implements PlugIn {
 			IJ.noImage();
 			return;
 		}
+		// Snapshot before anything, so we can revert if the user cancels the action.
+		imp.getProcessor().snapshot();
 
 		userRoiExists = parseCurrentROI();
 		GenericDialog dialog = prepareDialog(userRoiExists);
+		// Draw a preview scalebar with default or persisted configuration.
+		updateScalebar(true);
 
 		dialog.showDialog();
 		if (dialog.wasCanceled()) {
@@ -115,16 +119,12 @@ public class ScaleBar implements PlugIn {
 			config.location = locations[AT_SELECTION];
 		if (config.barWidth <= 0 || currentROIExists)
 			computeDefaultBarWidth(currentROIExists);
-			
-		int stackSize = imp.getStackSize();
+
 		int digits = (int)config.barWidth==config.barWidth?0:1;
 		if (config.barWidth<1.0)
 			digits = 2;
 			
-		imp.getProcessor().snapshot();
-		updateScalebar(true);
-
-		boolean multipleSlices = stackSize > 1;
+		boolean multipleSlices = imp.getStackSize() > 1;
 		return new BarDialog(getUnits(), digits, multipleSlices);
 	}
 
