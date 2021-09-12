@@ -115,12 +115,6 @@ public class ScaleBar implements PlugIn {
 			config.location = locations[AT_SELECTION];
 		if (config.barWidth <= 0 || currentROIExists)
 			computeDefaultBarWidth(currentROIExists);
-
-		Calibration cal = imp.getCalibration();
-		String units = cal.getUnits();
-		// Handle Digital Micrograph unit microns
-		if (units.equals("micron"))
-			units = IJ.micronSymbol+"m";
 			
 		int stackSize = imp.getStackSize();
 		int digits = (int)config.barWidth==config.barWidth?0:1;
@@ -134,7 +128,7 @@ public class ScaleBar implements PlugIn {
 			updateScalebar(true);
 
 		boolean multipleSlices = stackSize > 1;
-		return new BarDialog(units, digits, multipleSlices);
+		return new BarDialog(getUnits(), digits, multipleSlices);
 	}
 
 	void persistConfiguration() {
