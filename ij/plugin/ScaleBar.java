@@ -19,29 +19,8 @@ public class ScaleBar implements PlugIn {
 	static final String[] checkboxLabels = {"Bold Text", "Hide Text", "Serif Font", "Overlay"};
 	final static String SCALE_BAR = "|SB|";
 	
-	private static int defaultFontSize = 14;
-	private static int defaultBarHeight = 4;
-	private static double sBarWidth;
-	private static int sBarHeightInPixels = defaultBarHeight;
-	private static String sLocation = locations[LOWER_RIGHT];
-	private static String sColor = colors[0];
-	private static String sBcolor = bcolors[0];
-	private static boolean sBoldText = true;
-	private static boolean sHideText;
-	private static boolean sUseOverlay = true;
-	private static int sFontSize = defaultFontSize;
-	private static boolean sLabelAll;
-	
-	private double barWidth = sBarWidth;
-	private int barHeightInPixels = sBarHeightInPixels;
-	private String location = sLocation;
-	private String color = sColor;
-	private String bcolor = sBcolor;
-	private boolean boldText = sBoldText;
-	private boolean hideText = sHideText;
-	private boolean useOverlay = sUseOverlay;
-	private int fontSize = sFontSize;
-	private boolean labelAll = sLabelAll;
+	private static final ScaleBarConfiguration sConfig = new ScaleBarConfiguration();
+	private ScaleBarConfiguration config = new ScaleBarConfiguration(sConfig);
 
 	ImagePlus imp;
 	double imageWidth;
@@ -50,7 +29,6 @@ public class ScaleBar implements PlugIn {
 	int barWidthInPixels;
 	int roiX, roiY, roiWidth, roiHeight;
 	boolean userRoiExists;
-	boolean serifFont;
 	boolean[] checkboxStates = new boolean[4];
 	boolean showingOverlay, drawnScaleBar;
 
@@ -71,7 +49,7 @@ public class ScaleBar implements PlugIn {
 		}
 
 		persistConfiguration();
-		updateScalebar(!labelAll);
+		updateScalebar(!config.labelAll);
 	 }
 
 	void removeScalebar() {
@@ -103,48 +81,40 @@ public class ScaleBar implements PlugIn {
         return true;
     }
 
-	void computeDefaultBarAndFontSize() {
+	void computeDefaultBarWidth(boolean currentROIExists) {
 		Calibration cal = imp.getCalibration();
-
 		ImageWindow win = imp.getWindow();
 		mag = (win!=null)?win.getCanvas().getMagnification():1.0;
 		if (mag>1.0)
 			mag = 1.0;
-
-		if (fontSize<(defaultFontSize/mag))
-			fontSize = (int)(defaultFontSize/mag);
 
 		double pixelWidth = cal.pixelWidth;
 		if (pixelWidth==0.0)
 			pixelWidth = 1.0;
 		imageWidth = imp.getWidth()*pixelWidth;
 
-		if (roiX>0 && roiWidth>10)
-			barWidth = roiWidth*pixelWidth;
-		else if (barWidth==0.0 || barWidth>0.67*imageWidth) {
-			barWidth = (80.0*pixelWidth)/mag;
-			if (barWidth>0.67*imageWidth)
-				barWidth = 0.67*imageWidth;
-			if (barWidth>5.0)
-				barWidth = (int)barWidth;
+		if (currentROIExists && roiX>0 && roiWidth>10) {
+			// If the user has a ROI, set the bar width according to ROI width.
+			config.barWidth = roiWidth*pixelWidth;
 		}
-
-		if (mag<1.0 && barHeightInPixels<defaultBarHeight/mag)
-			barHeightInPixels = (int)(defaultBarHeight/mag);
+		else if (config.barWidth<=0.0 || config.barWidth>0.67*imageWidth) {
+			// If the bar is of negative width or too wide for the image,
+			// set the bar width to 80 pixels.
+			config.barWidth = (80.0*pixelWidth)/mag;
+			if (config.barWidth>0.67*imageWidth)
+				// If 80 pixels is too much, do 2/3 of the image.
+				config.barWidth = 0.67*imageWidth;
+			if (config.barWidth>5.0)
+				// If the resulting size is larger than 5 units, round the value.
+				config.barWidth = (int) config.barWidth;
+		}
 	} 
 
 	GenericDialog prepareDialog(boolean currentROIExists) {
-		if (IJ.macroRunning()) {
-			barHeightInPixels = defaultBarHeight;
-			location = locations[LOWER_RIGHT];
-			color = colors[0];
-			bcolor = bcolors[0];
-			fontSize = defaultFontSize;
-		}
 		if (currentROIExists)
-			location = locations[AT_SELECTION];
-
-		computeDefaultBarAndFontSize();
+			config.location = locations[AT_SELECTION];
+		if (config.barWidth <= 0 || currentROIExists)
+			computeDefaultBarWidth(currentROIExists);
 
 		Calibration cal = imp.getCalibration();
 		String units = cal.getUnits();
@@ -153,13 +123,13 @@ public class ScaleBar implements PlugIn {
 			units = IJ.micronSymbol+"m";
 			
 		int stackSize = imp.getStackSize();
-		int digits = (int)barWidth==barWidth?0:1;
-		if (barWidth<1.0)
+		int digits = (int)config.barWidth==config.barWidth?0:1;
+		if (config.barWidth<1.0)
 			digits = 2;
 			
 		imp.getProcessor().snapshot();
 		if (IJ.macroRunning())
-			boldText = hideText = serifFont = useOverlay = false;
+			config.boldText = config.hideText = config.serifFont = config.useOverlay = false;
 		else
 			updateScalebar(true);
 
@@ -168,16 +138,7 @@ public class ScaleBar implements PlugIn {
 	}
 
 	void persistConfiguration() {
-		sBarWidth = barWidth;
-		sBarHeightInPixels = barHeightInPixels;
-		sLocation = location;
-		sColor = color;
-		sBcolor = bcolor;
-		sBoldText = boldText;
-		sHideText = hideText;
-		sUseOverlay = useOverlay;
-		sFontSize = fontSize;
-		sLabelAll = labelAll;
+		sConfig.updateFrom(config);
 	}
 
 	/**
@@ -216,15 +177,15 @@ public class ScaleBar implements PlugIn {
 		Color bcolor = getBColor();
 		int x = xloc;
 		int y = yloc;
-		int fontType = boldText?Font.BOLD:Font.PLAIN;
-		String face = serifFont?"Serif":"SanSerif";
-		Font font = new Font(face, fontType, fontSize);
-		String label = getLength(barWidth) + " "+ getUnits();
+		int fontType = config.boldText?Font.BOLD:Font.PLAIN;
+		String face = config.serifFont?"Serif":"SanSerif";
+		Font font = new Font(face, fontType, config.fontSize);
+		String label = getLength(config.barWidth) + " "+ getUnits();
 		ImageProcessor ip = imp.getProcessor();
 		ip.setFont(font);
-		int swidth = hideText?0:ip.getStringWidth(label);
+		int swidth = config.hideText?0:ip.getStringWidth(label);
 		int xoffset = (barWidthInPixels - swidth)/2;
-		int yoffset =  barHeightInPixels + (hideText?0:fontSize+fontSize/4);
+		int yoffset =  config.barHeightInPixels + (config.hideText?0:config.fontSize+config.fontSize/4);
 		if (bcolor!=null) {
 			int w = barWidthInPixels;
 			int h = yoffset;
@@ -241,11 +202,11 @@ public class ScaleBar implements PlugIn {
 			background.setFillColor(bcolor);
 			overlay.add(background, SCALE_BAR);
 		}
-		Roi bar = new Roi(x, y, barWidthInPixels, barHeightInPixels);
+		Roi bar = new Roi(x, y, barWidthInPixels, config.barHeightInPixels);
 		bar.setFillColor(color);
 		overlay.add(bar, SCALE_BAR);
-		if (!hideText) {
-			TextRoi text = new TextRoi(x+xoffset, y+barHeightInPixels, label, font);
+		if (!config.hideText) {
+			TextRoi text = new TextRoi(x+xoffset, y+config.barHeightInPixels, label, font);
 			text.setStrokeColor(color);
 			overlay.add(text, SCALE_BAR);
 		}
@@ -261,14 +222,14 @@ public class ScaleBar implements PlugIn {
 		Color bcolor = getBColor();
 		int x = xloc;
 		int y = yloc;
-		int fontType = boldText?Font.BOLD:Font.PLAIN;
-		String font = serifFont?"Serif":"SanSerif";
-		ip.setFont(new Font(font, fontType, fontSize));
+		int fontType = config.boldText?Font.BOLD:Font.PLAIN;
+		String font = config.serifFont?"Serif":"SanSerif";
+		ip.setFont(new Font(font, fontType, config.fontSize));
 		ip.setAntialiasedText(true);
-		String label = getLength(barWidth) + " "+ units;
-		int swidth = hideText?0:ip.getStringWidth(label);
+		String label = getLength(config.barWidth) + " "+ units;
+		int swidth = config.hideText?0:ip.getStringWidth(label);
 		int xoffset = (barWidthInPixels - swidth)/2;
-		int yoffset =  barHeightInPixels + (hideText?0:fontSize+fontSize/(serifFont?8:4));
+		int yoffset =  config.barHeightInPixels + (config.hideText?0:config.fontSize+config.fontSize/(config.serifFont?8:4));
 
 		// Draw bkgnd box first,  based on bar width and height (and font size if hideText is not checked)
 		if (bcolor!=null) {
@@ -290,10 +251,10 @@ public class ScaleBar implements PlugIn {
 		
 		ip.resetRoi();
 		ip.setColor(color);
-		ip.setRoi(x, y, barWidthInPixels, barHeightInPixels);
+		ip.setRoi(x, y, barWidthInPixels, config.barHeightInPixels);
 		ip.fill();
 		ip.resetRoi();
-		if (!hideText)
+		if (!config.hideText)
 			ip.drawString(label, x+xoffset, y+yoffset);
 		drawnScaleBar = true;
 	}
@@ -309,23 +270,23 @@ public class ScaleBar implements PlugIn {
 	}
 
 	int computeLabelWidthInPixels() {
-		String label = getLength(barWidth)+" "+getUnits();
+		String label = getLength(config.barWidth)+" "+getUnits();
 		ImageProcessor ip = imp.getProcessor();
-		int swidth = hideText?0:ip.getStringWidth(label);
+		int swidth = config.hideText?0:ip.getStringWidth(label);
 		return (swidth < barWidthInPixels)?0:(int) (barWidthInPixels-swidth)/2;
 	}
 
 	void updateFont() {
-		int fontType = boldText?Font.BOLD:Font.PLAIN;
-		String font = serifFont?"Serif":"SanSerif";
+		int fontType = config.boldText?Font.BOLD:Font.PLAIN;
+		String font = config.serifFont?"Serif":"SanSerif";
 		ImageProcessor ip = imp.getProcessor();
-		ip.setFont(new Font(font, fontType, fontSize));
+		ip.setFont(new Font(font, fontType, config.fontSize));
 		ip.setAntialiasedText(true);
 	}
 
 	void updateLocation() throws MissingRoiException {
 		Calibration cal = imp.getCalibration();
-		barWidthInPixels = (int)(barWidth/cal.pixelWidth);
+		barWidthInPixels = (int)(config.barWidth/cal.pixelWidth);
 		int width = imp.getWidth();
 		int height = imp.getHeight();
 		int margin = (width+height)/100;
@@ -335,18 +296,18 @@ public class ScaleBar implements PlugIn {
 		int labelWidth = computeLabelWidthInPixels();
 		int x = 0;
 		int y = 0;
-		if (location.equals(locations[UPPER_RIGHT])) {
+		if (config.location.equals(locations[UPPER_RIGHT])) {
 			x = width - margin - barWidthInPixels + labelWidth;
 			y = margin;
-		} else if (location.equals(locations[LOWER_RIGHT])) {
+		} else if (config.location.equals(locations[LOWER_RIGHT])) {
 			x = width - margin - barWidthInPixels + labelWidth;
-			y = height - margin - barHeightInPixels - fontSize;
-		} else if (location.equals(locations[UPPER_LEFT])) {
+			y = height - margin - config.barHeightInPixels - config.fontSize;
+		} else if (config.location.equals(locations[UPPER_LEFT])) {
 			x = margin - labelWidth;
 			y = margin;
-		} else if (location.equals(locations[LOWER_LEFT])) {
+		} else if (config.location.equals(locations[LOWER_LEFT])) {
 			x = margin - labelWidth;
-			y = height - margin - barHeightInPixels - fontSize;
+			y = height - margin - config.barHeightInPixels - config.fontSize;
 		} else {
 			if (!userRoiExists)
 				throw new MissingRoiException();
@@ -359,29 +320,29 @@ public class ScaleBar implements PlugIn {
 
 	Color getColor() {
 		Color c = Color.black;
-		if (color.equals(colors[0])) c = Color.white;
-		else if (color.equals(colors[2])) c = Color.lightGray;
-		else if (color.equals(colors[3])) c = Color.gray;
-		else if (color.equals(colors[4])) c = Color.darkGray;
-		else if (color.equals(colors[5])) c = Color.red;
-		else if (color.equals(colors[6])) c = Color.green;
-		else if (color.equals(colors[7])) c = Color.blue;
-		else if (color.equals(colors[8])) c = Color.yellow;
+		if (config.color.equals(colors[0])) c = Color.white;
+		else if (config.color.equals(colors[2])) c = Color.lightGray;
+		else if (config.color.equals(colors[3])) c = Color.gray;
+		else if (config.color.equals(colors[4])) c = Color.darkGray;
+		else if (config.color.equals(colors[5])) c = Color.red;
+		else if (config.color.equals(colors[6])) c = Color.green;
+		else if (config.color.equals(colors[7])) c = Color.blue;
+		else if (config.color.equals(colors[8])) c = Color.yellow;
 	   return c;
 	}
 
 	// Div., mimic getColor to write getBColor for bkgnd	
 	Color getBColor() {
-		if (bcolor==null || bcolor.equals(bcolors[0])) return null;
+		if (config.bcolor==null || config.bcolor.equals(bcolors[0])) return null;
 		Color bc = Color.white;
-		if (bcolor.equals(bcolors[1])) bc = Color.black;
-		else if (bcolor.equals(bcolors[3])) bc = Color.darkGray;
-		else if (bcolor.equals(bcolors[4])) bc = Color.gray;
-		else if (bcolor.equals(bcolors[5])) bc = Color.lightGray;
-		else if (bcolor.equals(bcolors[6])) bc = Color.yellow;
-		else if (bcolor.equals(bcolors[7])) bc = Color.blue;
-		else if (bcolor.equals(bcolors[8])) bc = Color.green;
-		else if (bcolor.equals(bcolors[9])) bc = Color.red;
+		if (config.bcolor.equals(bcolors[1])) bc = Color.black;
+		else if (config.bcolor.equals(bcolors[3])) bc = Color.darkGray;
+		else if (config.bcolor.equals(bcolors[4])) bc = Color.gray;
+		else if (config.bcolor.equals(bcolors[5])) bc = Color.lightGray;
+		else if (config.bcolor.equals(bcolors[6])) bc = Color.yellow;
+		else if (config.bcolor.equals(bcolors[7])) bc = Color.blue;
+		else if (config.bcolor.equals(bcolors[8])) bc = Color.green;
+		else if (config.bcolor.equals(bcolors[9])) bc = Color.red;
 		return bc;
 	}
 
@@ -392,7 +353,7 @@ public class ScaleBar implements PlugIn {
 		} catch (MissingRoiException e) {
 			return; // Simply don't draw the scalebar.
 		}
-		if (useOverlay)
+		if (config.useOverlay)
 			createScaleBarOverlay(previewOnly);
 		else
 			createScaleBarDrawing(previewOnly);
@@ -406,20 +367,20 @@ public class ScaleBar implements PlugIn {
 			super("Scale Bar");
 			this.multipleSlices = multipleSlices;
 
-			addNumericField("Width in "+units+": ", barWidth, digits);
-			addNumericField("Height in pixels: ", barHeightInPixels, 0);
-			addNumericField("Font size: ", fontSize, 0);
-			addChoice("Color: ", colors, color);
-			addChoice("Background: ", bcolors, bcolor);
-			addChoice("Location: ", locations, location);
-			checkboxStates[0] = boldText; checkboxStates[1] = hideText;
-			checkboxStates[2] = serifFont; checkboxStates[3] = useOverlay;
+			addNumericField("Width in "+units+": ", config.barWidth, digits);
+			addNumericField("Height in pixels: ", config.barHeightInPixels, 0);
+			addNumericField("Font size: ", config.fontSize, 0);
+			addChoice("Color: ", colors, config.color);
+			addChoice("Background: ", bcolors, config.bcolor);
+			addChoice("Location: ", locations, config.location);
+			checkboxStates[0] = config.boldText; checkboxStates[1] = config.hideText;
+			checkboxStates[2] = config.serifFont; checkboxStates[3] = config.useOverlay;
 			setInsets(10, 25, 0);
 			addCheckboxGroup(2, 2, checkboxLabels, checkboxStates);
 
 			if (multipleSlices) {
 				setInsets(0, 25, 0);
-				addCheckbox("Label all slices", labelAll);
+				addCheckbox("Label all slices", config.labelAll);
 			}
 		}
 
@@ -428,35 +389,35 @@ public class ScaleBar implements PlugIn {
 			Double d = getValue(widthField.getText());
 			if (d==null)
 				return;
-			barWidth = d.doubleValue();
+			config.barWidth = d.doubleValue();
 			TextField heightField = ((TextField)numberField.elementAt(1));
 			d = getValue(heightField.getText());
 			if (d==null)
 				return;
-			barHeightInPixels = (int)d.doubleValue();
+			config.barHeightInPixels = (int)d.doubleValue();
 			TextField fontSizeField = ((TextField)numberField.elementAt(2));
 			d = getValue(fontSizeField.getText());
 			if (d==null)
 				return;
 			int size = (int)d.doubleValue();
 			if (size>5)
-				fontSize = size;
+				config.fontSize = size;
 			updateScalebar(true);
 		}
 
 		public void itemStateChanged(ItemEvent e) {
 			Choice col = (Choice)(choice.elementAt(0));
-			color = col.getSelectedItem();
+			config.color = col.getSelectedItem();
 			Choice bcol = (Choice)(choice.elementAt(1));
-			bcolor = bcol.getSelectedItem();
+			config.bcolor = bcol.getSelectedItem();
 			Choice loc = (Choice)(choice.elementAt(2));
-			location = loc.getSelectedItem();
-			boldText = ((Checkbox)(checkbox.elementAt(0))).getState();
-			hideText = ((Checkbox)(checkbox.elementAt(1))).getState();
-			serifFont = ((Checkbox)(checkbox.elementAt(2))).getState();
-			useOverlay = ((Checkbox)(checkbox.elementAt(3))).getState();
+			config.location = loc.getSelectedItem();
+			config.boldText = ((Checkbox)(checkbox.elementAt(0))).getState();
+			config.hideText = ((Checkbox)(checkbox.elementAt(1))).getState();
+			config.serifFont = ((Checkbox)(checkbox.elementAt(2))).getState();
+			config.useOverlay = ((Checkbox)(checkbox.elementAt(3))).getState();
 			if (multipleSlices)
-				labelAll = ((Checkbox)(checkbox.elementAt(4))).getState();
+				config.labelAll = ((Checkbox)(checkbox.elementAt(4))).getState();
 			updateScalebar(true);
 		}
 
@@ -467,5 +428,60 @@ public class ScaleBar implements PlugIn {
 			super("Scalebar location is set to AT_SELECTION but there is no selection on the image.");
 		}
    } //MissingRoiException inner class
+
+	static class ScaleBarConfiguration {
+	
+		private static int defaultBarHeight = 4;
+
+		double barWidth;
+		int barHeightInPixels;
+		String location;
+		String color;
+		String bcolor;
+		boolean boldText;
+		boolean hideText;
+		boolean serifFont;
+		boolean useOverlay;
+		int fontSize;
+		boolean labelAll;
+
+		/**
+		 * Create ScaleBarConfiguration with default values.
+		 */
+		ScaleBarConfiguration() {
+			this.barWidth = -1;
+			this.barHeightInPixels = defaultBarHeight;
+			this.location = locations[LOWER_RIGHT];
+			this.color = colors[0];
+			this.bcolor = bcolors[0];
+			this.boldText = true;
+			this.hideText = false;
+			this.serifFont = false;
+			this.useOverlay = true;
+			this.fontSize = 14;
+			this.labelAll = false;
+		}
+
+		/**
+		 * Copy constructor.
+		 */
+		ScaleBarConfiguration(ScaleBarConfiguration model) {
+			this.updateFrom(model);
+		}
+		
+		void updateFrom(ScaleBarConfiguration model) {
+			this.barWidth = model.barWidth;
+			this.barHeightInPixels = model.barHeightInPixels;
+			this.location = locations[LOWER_RIGHT];
+			this.color = model.color;
+			this.bcolor = model.bcolor;
+			this.boldText = model.boldText;
+			this.serifFont = model.serifFont;
+			this.hideText = model.hideText;
+			this.useOverlay = model.useOverlay;
+			this.fontSize = model.fontSize;
+			this.labelAll = model.labelAll;
+		}
+	} //ScaleBarConfiguration inner class
 
 } //ScaleBar class
