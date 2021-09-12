@@ -204,8 +204,6 @@ public class ScaleBar implements PlugIn {
 		Overlay overlay = imp.getOverlay();
 		if (overlay==null)
 			overlay = new Overlay();
-		else
-			overlay.remove(SCALE_BAR);
 		Color color = getColor();
 		Color bcolor = getBColor();
 		int x = xloc;
