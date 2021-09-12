@@ -59,8 +59,23 @@ public class ScaleBar implements PlugIn {
 			IJ.noImage();
 			return;
 		}
-		if (showDialog(imp))
-			labelSlices(imp);
+		GenericDialog dialog = prepareDialog(imp);
+
+		dialog.showDialog();
+		if (dialog.wasCanceled()) {
+			// Revert changes & return
+			imp.getProcessor().reset();
+			imp.updateAndDraw();
+			Overlay overlay = imp.getOverlay();
+			if (showingOverlay && overlay!=null) {
+				overlay.remove(SCALE_BAR);
+				imp.draw();
+			}
+			return;
+		}
+
+		parseDialog(imp, dialog);
+		labelSlices(imp);
 	 }
 
 	void labelSlices(ImagePlus imp) {
@@ -72,7 +87,7 @@ public class ScaleBar implements PlugIn {
 		imp.setStack(stack);
 	}
 
-	boolean showDialog(ImagePlus imp) {
+	GenericDialog prepareDialog(ImagePlus imp) {
 		if (IJ.macroRunning()) {
 			barHeightInPixels = defaultBarHeight;
 			location = locations[LOWER_RIGHT];
@@ -143,17 +158,10 @@ public class ScaleBar implements PlugIn {
 			gd.setInsets(0, 25, 0);
 			gd.addCheckbox("Label all slices", labelAll);
 		}
-		gd.showDialog();
-		if (gd.wasCanceled()) {
-			imp.getProcessor().reset();
-			imp.updateAndDraw();
-			Overlay overlay = imp.getOverlay();
-			if (showingOverlay && overlay!=null) {
-				overlay.remove(SCALE_BAR);
-				imp.draw();
-			}
-			return false;
-		}
+		return gd;
+	}
+
+	void parseDialog(ImagePlus imp, GenericDialog gd) {
 		barWidth = gd.getNextNumber();
 		barHeightInPixels = (int)gd.getNextNumber();
 		fontSize = (int)gd.getNextNumber();
@@ -164,6 +172,8 @@ public class ScaleBar implements PlugIn {
 		hideText = gd.getNextBoolean();
 		serifFont = gd.getNextBoolean();
 		createOverlay = gd.getNextBoolean();
+
+		int stackSize = imp.getStackSize();
 		if (stackSize>1)
 			labelAll = gd.getNextBoolean();
 		if (IJ.macroRunning())
@@ -180,7 +190,6 @@ public class ScaleBar implements PlugIn {
 			sFontSize = fontSize;
 			sLabelAll = labelAll;
 		}
-		return true;
 	}
 
 	void drawScaleBar(ImagePlus imp) {
