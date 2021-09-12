@@ -418,8 +418,11 @@ public class ScaleBar implements PlugIn {
 
    class BarDialog extends GenericDialog {
 
+		private boolean multipleSlices;
+
 		BarDialog(String units, int digits, boolean multipleSlices) {
 			super("Scale Bar");
+			this.multipleSlices = multipleSlices;
 
 			addNumericField("Width in "+units+": ", barWidth, digits);
 			addNumericField("Height in pixels: ", barHeightInPixels, 0);
@@ -470,6 +473,8 @@ public class ScaleBar implements PlugIn {
 			hideText = ((Checkbox)(checkbox.elementAt(1))).getState();
 			serifFont = ((Checkbox)(checkbox.elementAt(2))).getState();
 			useOverlay = ((Checkbox)(checkbox.elementAt(3))).getState();
+			if (multipleSlices)
+				labelAll = ((Checkbox)(checkbox.elementAt(4))).getState();
 			updateScalebar(true);
 		}
 
