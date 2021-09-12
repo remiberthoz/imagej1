@@ -70,7 +70,7 @@ public class ScaleBar implements PlugIn {
 			return;
 		}
 
-		parseDialog(dialog);
+		persistConfiguration();
 		updateScalebar(!labelAll);
 	 }
 
@@ -167,35 +167,17 @@ public class ScaleBar implements PlugIn {
 		return new BarDialog(units, digits, multipleSlices);
 	}
 
-	void parseDialog(GenericDialog gd) {
-		barWidth = gd.getNextNumber();
-		barHeightInPixels = (int)gd.getNextNumber();
-		fontSize = (int)gd.getNextNumber();
-		color = gd.getNextChoice();
-		bcolor = gd.getNextChoice();
-		location = gd.getNextChoice();
-		boldText = gd.getNextBoolean();
-		hideText = gd.getNextBoolean();
-		serifFont = gd.getNextBoolean();
-		useOverlay = gd.getNextBoolean();
-
-		int stackSize = imp.getStackSize();
-		if (stackSize>1)
-			labelAll = gd.getNextBoolean();
-		if (IJ.macroRunning())
-			updateScalebar(true);
-		else {
-			sBarWidth = barWidth;
-			sBarHeightInPixels = barHeightInPixels;
-			sLocation = location;
-			sColor = color;
-			sBcolor = bcolor;
-			sBoldText = boldText;
-			sHideText = hideText;
-			sUseOverlay = useOverlay;
-			sFontSize = fontSize;
-			sLabelAll = labelAll;
-		}
+	void persistConfiguration() {
+		sBarWidth = barWidth;
+		sBarHeightInPixels = barHeightInPixels;
+		sLocation = location;
+		sColor = color;
+		sBcolor = bcolor;
+		sBoldText = boldText;
+		sHideText = hideText;
+		sUseOverlay = useOverlay;
+		sFontSize = fontSize;
+		sLabelAll = labelAll;
 	}
 
 	/**
