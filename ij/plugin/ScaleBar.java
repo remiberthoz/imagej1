@@ -106,6 +106,36 @@ public class ScaleBar implements PlugIn {
         return true;
     }
 
+	void computeDefaultBarAndFontSize(ImagePlus imp) {
+		Calibration cal = imp.getCalibration();
+
+		ImageWindow win = imp.getWindow();
+		mag = (win!=null)?win.getCanvas().getMagnification():1.0;
+		if (mag>1.0)
+			mag = 1.0;
+
+		if (fontSize<(defaultFontSize/mag))
+			fontSize = (int)(defaultFontSize/mag);
+
+		double pixelWidth = cal.pixelWidth;
+		if (pixelWidth==0.0)
+			pixelWidth = 1.0;
+		imageWidth = imp.getWidth()*pixelWidth;
+
+		if (roiX>0 && roiWidth>10)
+			barWidth = roiWidth*pixelWidth;
+		else if (barWidth==0.0 || barWidth>0.67*imageWidth) {
+			barWidth = (80.0*pixelWidth)/mag;
+			if (barWidth>0.67*imageWidth)
+				barWidth = 0.67*imageWidth;
+			if (barWidth>5.0)
+				barWidth = (int)barWidth;
+		}
+
+		if (mag<1.0 && barHeightInPixels<defaultBarHeight/mag)
+			barHeightInPixels = (int)(defaultBarHeight/mag);
+	} 
+
 	GenericDialog prepareDialog(ImagePlus imp, boolean currentROIExists) {
 		if (IJ.macroRunning()) {
 			barHeightInPixels = defaultBarHeight;
@@ -117,38 +147,19 @@ public class ScaleBar implements PlugIn {
 		if (currentROIExists)
 			location = locations[AT_SELECTION];
 
+		computeDefaultBarAndFontSize(imp);
+
 		Calibration cal = imp.getCalibration();
-		ImageWindow win = imp.getWindow();
-		mag = (win!=null)?win.getCanvas().getMagnification():1.0;
-		if (mag>1.0)
-			mag = 1.0;
-		if (fontSize<(defaultFontSize/mag))
-			fontSize = (int)(defaultFontSize/mag);
 		String units = cal.getUnits();
 		// Handle Digital Micrograph unit microns
 		if (units.equals("micron"))
 			units = IJ.micronSymbol+"m";
-		double pixelWidth = cal.pixelWidth;
-		if (pixelWidth==0.0)
-			pixelWidth = 1.0;
-		double scale = 1.0/pixelWidth;
-		imageWidth = imp.getWidth()*pixelWidth;
-		if (roiX>0 && roiWidth>10)
-			barWidth = roiWidth*pixelWidth;
-		else if (barWidth==0.0 || barWidth>0.67*imageWidth) {
-			barWidth = (80.0*pixelWidth)/mag;
-			if (barWidth>0.67*imageWidth)
-				barWidth = 0.67*imageWidth;
-			if (barWidth>5.0)
-				barWidth = (int)barWidth;
-		}
+			
 		int stackSize = imp.getStackSize();
 		int digits = (int)barWidth==barWidth?0:1;
 		if (barWidth<1.0)
 			digits = 2;
-		int percent = (int)(barWidth*100.0/imageWidth);
-		if (mag<1.0 && barHeightInPixels<defaultBarHeight/mag)
-			barHeightInPixels = (int)(defaultBarHeight/mag);
+			
 		imp.getProcessor().snapshot();
 		if (IJ.macroRunning())
 			boldText = hideText = serifFont = createOverlay = false;
