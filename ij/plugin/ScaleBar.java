@@ -42,12 +42,9 @@ public class ScaleBar implements PlugIn {
 		imp.getProcessor().snapshot();
 
 		userRoiExists = parseCurrentROI();
-		GenericDialog dialog = prepareDialog(userRoiExists);
-		// Draw a preview scalebar with default or persisted configuration.
-		updateScalebar(true);
+		boolean userOKed = askUserConfiguration(userRoiExists);
 
-		dialog.showDialog();
-		if (dialog.wasCanceled()) {
+		if (!userOKed) {
 			removeScalebar();
 			return;
 		}
@@ -114,18 +111,38 @@ public class ScaleBar implements PlugIn {
 		}
 	} 
 
-	GenericDialog prepareDialog(boolean currentROIExists) {
-		if (currentROIExists)
+	/**
+	 * Genreate & draw the configuration dialog.
+	 * 
+	 * Return the value of dialog.wasOKed() when the user clicks OK
+	 * or Cancel.
+	 */
+	boolean askUserConfiguration(boolean currentROIExists) {
+		// Update the user configuration if there is an ROI, or if
+		// the defined bar width is negative (it is if it has never
+		// been set in this ImageJ instance).
+		if (currentROIExists) {
 			config.location = locations[AT_SELECTION];
-		if (config.barWidth <= 0 || currentROIExists)
+		}
+		if (config.barWidth <= 0 || currentROIExists) {
 			computeDefaultBarWidth(currentROIExists);
+		}
 
+		// Draw a first preview scalebar, with the default or presisted
+		// configuration.
+		updateScalebar(true);
+
+		// Get variables required to draw the dialog.
 		int digits = (int)config.barWidth==config.barWidth?0:1;
 		if (config.barWidth<1.0)
 			digits = 2;
 			
 		boolean multipleSlices = imp.getStackSize() > 1;
-		return new BarDialog(getUnits(), digits, multipleSlices);
+
+		// Create & show the dialog, then return.
+		GenericDialog dialog = new BarDialog(getUnits(), digits, multipleSlices);
+		dialog.showDialog();
+		return dialog.wasOKed();
 	}
 
 	void persistConfiguration() {
