@@ -122,10 +122,7 @@ public class ScaleBar implements PlugIn {
 			digits = 2;
 			
 		imp.getProcessor().snapshot();
-		if (IJ.macroRunning())
-			config.boldText = config.hideText = config.serifFont = config.useOverlay = false;
-		else
-			updateScalebar(true);
+		updateScalebar(true);
 
 		boolean multipleSlices = stackSize > 1;
 		return new BarDialog(getUnits(), digits, multipleSlices);
