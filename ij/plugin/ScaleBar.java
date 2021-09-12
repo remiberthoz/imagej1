@@ -28,7 +28,7 @@ public class ScaleBar implements PlugIn {
 	private static String sBcolor = bcolors[0];
 	private static boolean sBoldText = true;
 	private static boolean sHideText;
-	private static boolean sCreateOverlay = true;
+	private static boolean sUseOverlay = true;
 	private static int sFontSize = defaultFontSize;
 	private static boolean sLabelAll;
 	
@@ -39,7 +39,7 @@ public class ScaleBar implements PlugIn {
 	private String bcolor = sBcolor;
 	private boolean boldText = sBoldText;
 	private boolean hideText = sHideText;
-	private boolean createOverlay = sCreateOverlay;
+	private boolean useOverlay = sUseOverlay;
 	private int fontSize = sFontSize;
 	private boolean labelAll = sLabelAll;
 
@@ -70,7 +70,7 @@ public class ScaleBar implements PlugIn {
 		}
 
 		parseDialog(dialog);
-		labelSlices();
+		updateScalebar(!labelAll);
 	 }
 
 	void removeScalebar() {
@@ -83,15 +83,6 @@ public class ScaleBar implements PlugIn {
 			overlay.remove(SCALE_BAR);
 			imp.draw();
 		}
-	}
-
-	void labelSlices() {
-		if (createOverlay) return;
-		ImageStack stack = imp.getStack();
-		String units = getUnits();
-		for (int i=1; i<=stack.size(); i++)
-			drawScaleBar(stack.getProcessor(i), units);
-		imp.setStack(stack);
 	}
 
 	/**
@@ -167,9 +158,9 @@ public class ScaleBar implements PlugIn {
 			
 		imp.getProcessor().snapshot();
 		if (IJ.macroRunning())
-			boldText = hideText = serifFont = createOverlay = false;
+			boldText = hideText = serifFont = useOverlay = false;
 		else
-			updateScalebar();
+			updateScalebar(true);
 
 		boolean multipleSlices = stackSize > 1;
 		return new BarDialog(units, digits, multipleSlices);
@@ -185,13 +176,13 @@ public class ScaleBar implements PlugIn {
 		boldText = gd.getNextBoolean();
 		hideText = gd.getNextBoolean();
 		serifFont = gd.getNextBoolean();
-		createOverlay = gd.getNextBoolean();
+		useOverlay = gd.getNextBoolean();
 
 		int stackSize = imp.getStackSize();
 		if (stackSize>1)
 			labelAll = gd.getNextBoolean();
 		if (IJ.macroRunning())
-			updateScalebar();
+			updateScalebar(true);
 		else {
 			sBarWidth = barWidth;
 			sBarHeightInPixels = barHeightInPixels;
@@ -200,18 +191,30 @@ public class ScaleBar implements PlugIn {
 			sBcolor = bcolor;
 			sBoldText = boldText;
 			sHideText = hideText;
-			sCreateOverlay = createOverlay;
+			sUseOverlay = useOverlay;
 			sFontSize = fontSize;
 			sLabelAll = labelAll;
 		}
 	}
 
-	void drawScaleBar() {
-		  if (!updateLocation())
+	/**
+	 * Create & draw the scalebar by editing pixels in the image.
+	 */
+	void createScaleBarDrawing(boolean previewOnly) {
+		if (!updateLocation())
 			return;
-		Undo.setup(Undo.FILTER, imp);
-		drawScaleBar(imp.getProcessor(), getUnits());
-		imp.updateAndDraw();
+
+		if (previewOnly) {
+			Undo.setup(Undo.FILTER, imp);
+			drawScaleBarOnImageProcessor(imp.getProcessor(), getUnits());
+			imp.updateAndDraw();
+		} else {
+			ImageStack stack = imp.getStack();
+			String units = getUnits();
+			for (int i=1; i<=stack.size(); i++)
+				drawScaleBarOnImageProcessor(stack.getProcessor(i), units);
+			imp.setStack(stack);
+		}
 	}
 	
 	String getUnits() {
@@ -221,7 +224,10 @@ public class ScaleBar implements PlugIn {
 		return units;
 	}
 
-	void createOverlay() {
+	/**
+	 * Create & draw the scalebar using an Overlay.
+	 */
+	void createScaleBarOverlay(boolean previewOnly) {
 		Overlay overlay = imp.getOverlay();
 		if (overlay==null)
 			overlay = new Overlay();
@@ -268,7 +274,10 @@ public class ScaleBar implements PlugIn {
 		showingOverlay = true;
 	}
 	
-	void drawScaleBar(ImageProcessor ip, String units) {
+	/**
+	 * Draw the scalebar on pixels of the {ip} ImageProcessor.
+	 */
+	void drawScaleBarOnImageProcessor(ImageProcessor ip, String units) {
 		Color color = getColor();
 		Color bcolor = getBColor();
 		int x = xloc;
@@ -398,22 +407,13 @@ public class ScaleBar implements PlugIn {
 		return bc;
 	}
 
-	void updateScalebar() {
+	void updateScalebar(boolean previewOnly) {
 		updateLocation();
-		imp.getProcessor().reset();
-		if (createOverlay) {
-			if (drawnScaleBar) {
-				imp.updateAndDraw();
-				drawnScaleBar = false;
-			}
-			createOverlay();
-		} else {
-			if (showingOverlay) {
-				imp.setOverlay(null);
-				showingOverlay = false;
-			}
-			drawScaleBar();
-		}
+		removeScalebar();
+		if (useOverlay)
+			createScaleBarOverlay(previewOnly);
+		else
+			createScaleBarDrawing(previewOnly);
 	}
 
    class BarDialog extends GenericDialog {
@@ -428,7 +428,7 @@ public class ScaleBar implements PlugIn {
 			addChoice("Background: ", bcolors, bcolor);
 			addChoice("Location: ", locations, location);
 			checkboxStates[0] = boldText; checkboxStates[1] = hideText;
-			checkboxStates[2] = serifFont; checkboxStates[3] = createOverlay;
+			checkboxStates[2] = serifFont; checkboxStates[3] = useOverlay;
 			setInsets(10, 25, 0);
 			addCheckboxGroup(2, 2, checkboxLabels, checkboxStates);
 
@@ -456,7 +456,7 @@ public class ScaleBar implements PlugIn {
 			int size = (int)d.doubleValue();
 			if (size>5)
 				fontSize = size;
-			updateScalebar();
+			updateScalebar(true);
 		}
 
 		public void itemStateChanged(ItemEvent e) {
@@ -469,8 +469,8 @@ public class ScaleBar implements PlugIn {
 			boldText = ((Checkbox)(checkbox.elementAt(0))).getState();
 			hideText = ((Checkbox)(checkbox.elementAt(1))).getState();
 			serifFont = ((Checkbox)(checkbox.elementAt(2))).getState();
-			createOverlay = ((Checkbox)(checkbox.elementAt(3))).getState();
-			updateScalebar();
+			useOverlay = ((Checkbox)(checkbox.elementAt(3))).getState();
+			updateScalebar(true);
 		}
 
    } //BarDialog inner class
