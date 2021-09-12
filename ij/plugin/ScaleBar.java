@@ -29,6 +29,11 @@ public class ScaleBar implements PlugIn {
 	boolean userRoiExists;
 	boolean[] checkboxStates = new boolean[4];
 
+	/**
+	 * This method is called when the plugin is loaded. 'arg', which
+	 * may be blank, is the argument specified for this plugin in
+	 * IJ_Props.txt.
+	 */
 	public void run(String arg) {
 		imp = WindowManager.getCurrentImage();
 		if (imp == null) {
@@ -50,6 +55,19 @@ public class ScaleBar implements PlugIn {
 		updateScalebar(!config.labelAll);
 	 }
 
+	/**
+	 * Remove the scalebar drawn by this plugin.
+	 * 
+	 * If the scalebar was drawn without the overlay by another
+	 * instance of the plugin (it is drawn into the image), then
+	 * we cannot remove it.
+	 * 
+	 * If the scalebar was drawn using the overlay by another
+	 * instance of the plugin, then we can remove it.
+	 * 
+	 * With or without the overlay, we can remove a scalebar
+	 * drawn by this instance of the plugin.
+	 */
 	void removeScalebar() {
 		// Revert with Undo, in case "Use Overlay" is not ticked
 		imp.getProcessor().reset();
@@ -79,6 +97,12 @@ public class ScaleBar implements PlugIn {
         return true;
     }
 
+	/**
+	 * There is no hard codded value for the width of the scalebar,
+	 * when the plugin is called for the first time in an ImageJ
+	 * instance, a defautl value for the width will be computed by
+	 * this method.
+	 */
 	void computeDefaultBarWidth(boolean currentROIExists) {
 		Calibration cal = imp.getCalibration();
 		ImageWindow win = imp.getWindow();
@@ -128,7 +152,7 @@ public class ScaleBar implements PlugIn {
 		// Draw a first preview scalebar, with the default or presisted
 		// configuration.
 		updateScalebar(true);
-
+		
 		// Create & show the dialog, then return.
 		boolean multipleSlices = imp.getStackSize() > 1;
 		GenericDialog dialog = new BarDialog(getUnits(), config.digits, multipleSlices);
@@ -136,6 +160,13 @@ public class ScaleBar implements PlugIn {
 		return dialog.wasOKed();
 	}
 
+	/**
+	 * Store the active configuration into the static variable that
+	 * is persisted across calls of the plugin.
+	 * 
+	 * The "active" configuration is normally the one reflected by
+	 * the dialog.
+	 */
 	void persistConfiguration() {
 		sConfig.updateFrom(config);
 	}
@@ -156,6 +187,9 @@ public class ScaleBar implements PlugIn {
 		}
 	}
 	
+	/**
+	 * Return the length unit string defined in the image calibration.
+	 */
 	String getUnits() {
 		String units = imp.getCalibration().getUnits();
 		if (units.equals("microns"))
@@ -342,6 +376,16 @@ public class ScaleBar implements PlugIn {
 		return bc;
 	}
 
+	/**
+	 * Draw the scale bar, based on the current configuration.
+	 * 
+	 * If {previewOnly} is true, only the active slice will be
+	 * labeled with a scalebar. If it is false, all slices of
+	 * the stack will be labeled.
+	 * 
+	 * This method chooses whether to use an overlay or the
+	 * drawing tool to create the scalebar.
+	 */
 	void updateScalebar(boolean previewOnly) {
 		removeScalebar();
 		try {
