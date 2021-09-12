@@ -203,7 +203,6 @@ public class ScaleBar implements PlugIn {
 	 */
 	void createScaleBarDrawing(boolean previewOnly) {
 		if (previewOnly) {
-			Undo.setup(Undo.FILTER, imp);
 			drawScaleBarOnImageProcessor(imp.getProcessor(), getUnits());
 			imp.updateAndDraw();
 		} else {
