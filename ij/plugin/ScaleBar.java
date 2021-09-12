@@ -25,6 +25,7 @@ public class ScaleBar implements PlugIn {
 	ImagePlus imp;
 	int xloc, yloc;
 	int hBarWidthInPixels;
+	int vBarHeightInPixels;
 	int roiX, roiY, roiWidth, roiHeight;
 	boolean userRoiExists;
 	boolean[] checkboxStates = new boolean[4];
@@ -113,7 +114,11 @@ public class ScaleBar implements PlugIn {
 		double pixelWidth = cal.pixelWidth;
 		if (pixelWidth==0.0)
 			pixelWidth = 1.0;
+		double pixelHeight = cal.pixelHeight;
+		if (pixelHeight==0.0)
+			pixelHeight = 1.0;
 		double imageWidth = imp.getWidth()*pixelWidth;
+		double imageHeight = imp.getHeight()*pixelHeight;
 
 		if (currentROIExists && roiX>=0 && roiWidth>10) {
 			// If the user has a ROI, set the bar width according to ROI width.
@@ -130,6 +135,19 @@ public class ScaleBar implements PlugIn {
 				// If the resulting size is larger than 5 units, round the value.
 				config.hBarWidth = (int) config.hBarWidth;
 		}
+
+		if (currentROIExists && roiY>=0 && roiHeight>10) {
+			config.vBarHeight = roiHeight*pixelHeight;
+		}
+		else if (config.vBarHeight<=0.0 || config.vBarHeight>0.67*imageHeight) {
+			config.vBarHeight = (80.0*pixelHeight)/mag;
+			if (config.vBarHeight>0.67*imageHeight)
+				// If 80 pixels is too much, do 2/3 of the image.
+				config.vBarHeight = 0.67*imageHeight;
+			if (config.vBarHeight>5.0)
+				// If the resulting size is larger than 5 units, round the value.
+				config.vBarHeight = (int) config.vBarHeight;
+		}
 	} 
 
 	/**
@@ -145,7 +163,7 @@ public class ScaleBar implements PlugIn {
 		if (currentROIExists) {
 			config.location = locations[AT_SELECTION];
 		}
-		if (config.hBarWidth <= 0 || currentROIExists) {
+		if (config.hBarWidth <= 0 || config.vBarHeight <= 0 || currentROIExists) {
 			computeDefaultBarWidth(currentROIExists);
 		}
 
@@ -155,7 +173,7 @@ public class ScaleBar implements PlugIn {
 		
 		// Create & show the dialog, then return.
 		boolean multipleSlices = imp.getStackSize() > 1;
-		GenericDialog dialog = new BarDialog(getHUnit(), config.hDigits, multipleSlices);
+		GenericDialog dialog = new BarDialog(getHUnit(), getVUnit(), config.hDigits, config.vDigits, multipleSlices);
 		dialog.showDialog();
 		return dialog.wasOKed();
 	}
@@ -194,6 +212,16 @@ public class ScaleBar implements PlugIn {
 		if (hUnits.equals("microns"))
 			hUnits = IJ.micronSymbol+"m";
 		return hUnits;
+	}
+
+	/**
+	 * Return the Y unit strings defined in the image calibration.
+	 */
+	String getVUnit() {
+		String vUnits = imp.getCalibration().getYUnit();
+		if (vUnits.equals("microns"))
+			vUnits = IJ.micronSymbol+"m";
+		return vUnits;
 	}
 
 	/**
@@ -294,10 +322,23 @@ public class ScaleBar implements PlugIn {
 		return IJ.d2s(config.hBarWidth, config.hDigits) + " " + getHUnit();
 	}
 
+	/**
+	 * Returns the text to draw near the scalebar (<height> <unit>).
+	 */
+	String getVLabel() {
+		return IJ.d2s(config.vBarHeight, config.vDigits) + " " + getVUnit();
+	}
+
 	int computeHLabelWidthInPixels() {
 		ImageProcessor ip = imp.getProcessor();
 		int hLabelWidth = config.hideText?0:ip.getStringWidth(getHLabel());
 		return (hLabelWidth < hBarWidthInPixels)?0:(int) (hBarWidthInPixels-hLabelWidth)/2;
+	}
+
+	int computeVLabelHeightInPixels() {
+		ImageProcessor ip = imp.getProcessor();
+		int vLabelHeight = config.hideText?0:ip.getStringWidth(getVLabel());
+		return (vLabelHeight < vBarHeightInPixels)?0:(int) (vBarHeightInPixels-vLabelHeight)/2;
 	}
 
 	void updateFont() {
@@ -314,6 +355,7 @@ public class ScaleBar implements PlugIn {
 		double mag = (win!=null)?win.getCanvas().getMagnification():1.0;
 
 		hBarWidthInPixels = (int)(config.hBarWidth/cal.pixelWidth);
+		vBarHeightInPixels = (int)(config.vBarHeight/cal.pixelHeight);
 		int imageWidth = imp.getWidth();
 		int imageHeight = imp.getHeight();
 		int margin = (imageWidth+imageHeight)/100;
@@ -321,6 +363,7 @@ public class ScaleBar implements PlugIn {
 			margin = (int)(margin*1.5);
 		updateFont();
 		int hLabelWidth = computeHLabelWidthInPixels();
+		int vLabelHeight = computeVLabelHeightInPixels();
 		int x = 0;
 		int y = 0;
 		if (config.location.equals(locations[UPPER_RIGHT])) {
@@ -400,12 +443,12 @@ public class ScaleBar implements PlugIn {
 
 		private boolean multipleSlices;
 
-		BarDialog(String hUnits, int hDigits, boolean multipleSlices) {
+		BarDialog(String hUnits, String vUnits, int hDigits, int vDigits, boolean multipleSlices) {
 			super("Scale Bar");
 			this.multipleSlices = multipleSlices;
 
 			addNumericField("Width in "+hUnits+": ", config.hBarWidth, hDigits);
-			addNumericField("Height in "+"<vUnits>"+": ", 0, 0);
+			addNumericField("Height in "+vUnits+": ", config.vBarHeight, vDigits);
 			addNumericField("Thickness in pixels: ", config.barThicknessInPixels, 0);
 			addNumericField("Font size: ", config.fontSize, 0);
 			addChoice("Color: ", colors, config.color);
@@ -431,6 +474,11 @@ public class ScaleBar implements PlugIn {
 			if (d==null)
 				return;
 			config.hBarWidth = d.doubleValue();
+			TextField vHeightField = ((TextField)numberField.elementAt(1));
+			d = getValue(vHeightField.getText());
+			if (d==null)
+				return;
+			config.vBarHeight = d.doubleValue();
 			TextField thicknessField = ((TextField)numberField.elementAt(2));
 			d = getValue(thicknessField.getText());
 			if (d==null)
@@ -455,6 +503,19 @@ public class ScaleBar implements PlugIn {
 					hasDecimalPoint = true;
 				}
 			}
+
+			String heightString = vHeightField.getText();
+			hasDecimalPoint = false;
+			config.vDigits = 0;
+			for (int i = 0; i < heightString.length(); i++) {
+				if (hasDecimalPoint) {
+					config.vDigits += 1;
+				}
+				if (widthString.charAt(i) == '.') {
+					hasDecimalPoint = true;
+				}
+			}
+
 			updateScalebar(true);
 		}
 
@@ -487,7 +548,9 @@ public class ScaleBar implements PlugIn {
 		private static int defaultBarHeight = 4;
 
 		double hBarWidth;
+		double vBarHeight;
 		int hDigits;  // The number of digits after the decimal point that the user input in the dialog for vBarWidth.
+		int vDigits;
 		int barThicknessInPixels;
 		String location;
 		String color;
@@ -504,6 +567,7 @@ public class ScaleBar implements PlugIn {
 		 */
 		ScaleBarConfiguration() {
 			this.hBarWidth = -1;
+			this.vBarHeight = -1;
 			this.barThicknessInPixels = defaultBarHeight;
 			this.location = locations[LOWER_RIGHT];
 			this.color = colors[0];
@@ -525,7 +589,9 @@ public class ScaleBar implements PlugIn {
 		
 		void updateFrom(ScaleBarConfiguration model) {
 			this.hBarWidth = model.hBarWidth;
+			this.vBarHeight = model.vBarHeight;
 			this.hDigits = model.hDigits;
+			this.vDigits = model.vDigits;
 			this.barThicknessInPixels = model.barThicknessInPixels;
 			this.location = locations[LOWER_RIGHT];
 			this.color = model.color;
