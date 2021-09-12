@@ -170,22 +170,9 @@ public class ScaleBar implements PlugIn {
 			boldText = hideText = serifFont = createOverlay = false;
 		else
 			updateScalebar();
-		GenericDialog gd = new BarDialog("Scale Bar");
-		gd.addNumericField("Width in "+units+": ", barWidth, digits);
-		gd.addNumericField("Height in pixels: ", barHeightInPixels, 0);
-		gd.addNumericField("Font size: ", fontSize, 0);
-		gd.addChoice("Color: ", colors, color);
-		gd.addChoice("Background: ", bcolors, bcolor);
-		gd.addChoice("Location: ", locations, location);
-		checkboxStates[0] = boldText; checkboxStates[1] = hideText;
-		checkboxStates[2] = serifFont; checkboxStates[3] = createOverlay;
-		gd.setInsets(10, 25, 0);
-		gd.addCheckboxGroup(2, 2, checkboxLabels, checkboxStates);
-		if (stackSize>1) {
-			gd.setInsets(0, 25, 0);
-			gd.addCheckbox("Label all slices", labelAll);
-		}
-		return gd;
+
+		boolean multipleSlices = stackSize > 1;
+		return new BarDialog(units, digits, multipleSlices);
 	}
 
 	void parseDialog(GenericDialog gd) {
@@ -422,8 +409,24 @@ public class ScaleBar implements PlugIn {
 
    class BarDialog extends GenericDialog {
 
-		BarDialog(String title) {
-			super(title);
+		BarDialog(String units, int digits, boolean multipleSlices) {
+			super("Scale Bar");
+
+			addNumericField("Width in "+units+": ", barWidth, digits);
+			addNumericField("Height in pixels: ", barHeightInPixels, 0);
+			addNumericField("Font size: ", fontSize, 0);
+			addChoice("Color: ", colors, color);
+			addChoice("Background: ", bcolors, bcolor);
+			addChoice("Location: ", locations, location);
+			checkboxStates[0] = boldText; checkboxStates[1] = hideText;
+			checkboxStates[2] = serifFont; checkboxStates[3] = createOverlay;
+			setInsets(10, 25, 0);
+			addCheckboxGroup(2, 2, checkboxLabels, checkboxStates);
+
+			if (multipleSlices) {
+				setInsets(0, 25, 0);
+				addCheckbox("Label all slices", labelAll);
+			}
 		}
 
 		public void textValueChanged(TextEvent e) {
