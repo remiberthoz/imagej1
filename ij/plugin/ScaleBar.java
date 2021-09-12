@@ -320,6 +320,21 @@ public class ScaleBar implements PlugIn {
 		return IJ.d2s(barWidth, digits);
 	}
 
+	int computeLabelWidthInPixels() {
+		String label = getLength(barWidth)+" "+getUnits();
+		ImageProcessor ip = imp.getProcessor();
+		int swidth = hideText?0:ip.getStringWidth(label);
+		return (swidth < barWidthInPixels)?0:(int) (barWidthInPixels-swidth)/2;
+	}
+
+	void updateFont() {
+		int fontType = boldText?Font.BOLD:Font.PLAIN;
+		String font = serifFont?"Serif":"SanSerif";
+		ImageProcessor ip = imp.getProcessor();
+		ip.setFont(new Font(font, fontType, fontSize));
+		ip.setAntialiasedText(true);
+	}
+
 	boolean updateLocation() {
 		Calibration cal = imp.getCalibration();
 		barWidthInPixels = (int)(barWidth/cal.pixelWidth);
@@ -328,14 +343,8 @@ public class ScaleBar implements PlugIn {
 		int margin = (width+height)/100;
 		if (mag==1.0)
 			margin = (int)(margin*1.5);
-		int fontType = boldText?Font.BOLD:Font.PLAIN;
-		String font = serifFont?"Serif":"SanSerif";
-		ImageProcessor ip = imp.getProcessor();
-		ip.setFont(new Font(font, fontType, fontSize));
-		ip.setAntialiasedText(true);
-		String label = getLength(barWidth)+" "+getUnits();
-		int swidth = hideText?0:ip.getStringWidth(label);
-		int labelWidth = (swidth < barWidthInPixels)?0:(int) (barWidthInPixels-swidth)/2;
+		updateFont();
+		int labelWidth = computeLabelWidthInPixels();
 		int x = 0;
 		int y = 0;
 		if (location.equals(locations[UPPER_RIGHT])) {
