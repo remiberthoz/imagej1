@@ -55,11 +55,12 @@ public class ScaleBar implements PlugIn {
 
 	public void run(String arg) {
 		imp = WindowManager.getCurrentImage();
-		if (imp!=null) {
-			if (showDialog(imp))
-				labelSlices(imp);
-		} else
+		if (imp == null) {
 			IJ.noImage();
+			return;
+		}
+		if (showDialog(imp))
+			labelSlices(imp);
 	 }
 
 	void labelSlices(ImagePlus imp) {
