@@ -65,20 +65,25 @@ public class ScaleBar implements PlugIn {
 
 		dialog.showDialog();
 		if (dialog.wasCanceled()) {
-			// Revert changes & return
-			imp.getProcessor().reset();
-			imp.updateAndDraw();
-			Overlay overlay = imp.getOverlay();
-			if (showingOverlay && overlay!=null) {
-				overlay.remove(SCALE_BAR);
-				imp.draw();
-			}
+			removeScalebar();
 			return;
 		}
 
 		parseDialog(dialog);
 		labelSlices();
 	 }
+
+	void removeScalebar() {
+		// Revert with Undo, in case "Use Overlay" is not ticked
+		imp.getProcessor().reset();
+		imp.updateAndDraw();
+		// Remove overlay drawn by this plugin, in case "Use Overlay" is ticked
+		Overlay overlay = imp.getOverlay();
+		if (overlay!=null) {
+			overlay.remove(SCALE_BAR);
+			imp.draw();
+		}
+	}
 
 	void labelSlices() {
 		if (createOverlay) return;
