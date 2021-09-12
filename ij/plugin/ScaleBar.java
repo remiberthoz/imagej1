@@ -48,7 +48,8 @@ public class ScaleBar implements PlugIn {
 	double mag = 1.0;
 	int xloc, yloc;
 	int barWidthInPixels;
-	int roiX=-1, roiY, roiWidth, roiHeight;
+	int roiX, roiY, roiWidth, roiHeight;
+	boolean userRoiExists;
 	boolean serifFont;
 	boolean[] checkboxStates = new boolean[4];
 	boolean showingOverlay, drawnScaleBar;
@@ -60,8 +61,8 @@ public class ScaleBar implements PlugIn {
 			return;
 		}
 
-		boolean currentROIExists = parseCurrentROI();
-		GenericDialog dialog = prepareDialog(currentROIExists);
+		userRoiExists = parseCurrentROI();
+		GenericDialog dialog = prepareDialog(userRoiExists);
 
 		dialog.showDialog();
 		if (dialog.wasCanceled()) {
@@ -201,9 +202,6 @@ public class ScaleBar implements PlugIn {
 	 * Create & draw the scalebar by editing pixels in the image.
 	 */
 	void createScaleBarDrawing(boolean previewOnly) {
-		if (!updateLocation())
-			return;
-
 		if (previewOnly) {
 			Undo.setup(Undo.FILTER, imp);
 			drawScaleBarOnImageProcessor(imp.getProcessor(), getUnits());
@@ -344,7 +342,7 @@ public class ScaleBar implements PlugIn {
 		ip.setAntialiasedText(true);
 	}
 
-	boolean updateLocation() {
+	void updateLocation() throws MissingRoiException {
 		Calibration cal = imp.getCalibration();
 		barWidthInPixels = (int)(barWidth/cal.pixelWidth);
 		int width = imp.getWidth();
@@ -369,14 +367,13 @@ public class ScaleBar implements PlugIn {
 			x = margin - labelWidth;
 			y = height - margin - barHeightInPixels - fontSize;
 		} else {
-			if (roiX==-1)
-				return false;
+			if (!userRoiExists)
+				throw new MissingRoiException();
 			x = roiX;
 			y = roiY;
 		}
 		xloc = x;
 		yloc = y;
-		return true;
 	}
 
 	Color getColor() {
@@ -408,8 +405,12 @@ public class ScaleBar implements PlugIn {
 	}
 
 	void updateScalebar(boolean previewOnly) {
-		updateLocation();
 		removeScalebar();
+		try {
+			updateLocation();
+		} catch (MissingRoiException e) {
+			return; // Simply don't draw the scalebar.
+		}
 		if (useOverlay)
 			createScaleBarOverlay(previewOnly);
 		else
@@ -474,5 +475,11 @@ public class ScaleBar implements PlugIn {
 		}
 
    } //BarDialog inner class
+
+   class MissingRoiException extends Exception {
+		MissingRoiException() {
+			super("Scalebar location is set to AT_SELECTION but there is no selection on the image.");
+		}
+   }
 
 } //ScaleBar class
