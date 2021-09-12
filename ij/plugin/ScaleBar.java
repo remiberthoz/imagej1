@@ -93,7 +93,7 @@ public class ScaleBar implements PlugIn {
 			pixelWidth = 1.0;
 		imageWidth = imp.getWidth()*pixelWidth;
 
-		if (currentROIExists && roiX>0 && roiWidth>10) {
+		if (currentROIExists && roiX>=0 && roiWidth>10) {
 			// If the user has a ROI, set the bar width according to ROI width.
 			config.barWidth = roiWidth*pixelWidth;
 		}
