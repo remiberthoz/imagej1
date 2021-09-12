@@ -369,6 +369,9 @@ public class ScaleBar implements PlugIn {
 			setInsets(10, 25, 0);
 			addCheckboxGroup(2, 2, checkboxLabels, checkboxStates);
 
+			// For simplicity of the itemStateChanged() method below,
+			// is is best to keep the "Label all slices" checkbox in
+			// the last position.
 			if (multipleSlices) {
 				setInsets(0, 25, 0);
 				addCheckbox("Label all slices", config.labelAll);
