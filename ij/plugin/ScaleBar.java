@@ -23,14 +23,11 @@ public class ScaleBar implements PlugIn {
 	private ScaleBarConfiguration config = new ScaleBarConfiguration(sConfig);
 
 	ImagePlus imp;
-	double imageWidth;
-	double mag = 1.0;
 	int xloc, yloc;
 	int barWidthInPixels;
 	int roiX, roiY, roiWidth, roiHeight;
 	boolean userRoiExists;
 	boolean[] checkboxStates = new boolean[4];
-	boolean showingOverlay, drawnScaleBar;
 
 	public void run(String arg) {
 		imp = WindowManager.getCurrentImage();
@@ -85,14 +82,14 @@ public class ScaleBar implements PlugIn {
 	void computeDefaultBarWidth(boolean currentROIExists) {
 		Calibration cal = imp.getCalibration();
 		ImageWindow win = imp.getWindow();
-		mag = (win!=null)?win.getCanvas().getMagnification():1.0;
+		double mag = (win!=null)?win.getCanvas().getMagnification():1.0;
 		if (mag>1.0)
 			mag = 1.0;
 
 		double pixelWidth = cal.pixelWidth;
 		if (pixelWidth==0.0)
 			pixelWidth = 1.0;
-		imageWidth = imp.getWidth()*pixelWidth;
+		double imageWidth = imp.getWidth()*pixelWidth;
 
 		if (currentROIExists && roiX>=0 && roiWidth>10) {
 			// If the user has a ROI, set the bar width according to ROI width.
@@ -219,7 +216,6 @@ public class ScaleBar implements PlugIn {
 			overlay.add(text, SCALE_BAR);
 		}
 		imp.setOverlay(overlay);
-		showingOverlay = true;
 	}
 	
 	/**
@@ -264,7 +260,6 @@ public class ScaleBar implements PlugIn {
 		ip.resetRoi();
 		if (!config.hideText)
 			ip.drawString(label, x+xoffset, y+yoffset);
-		drawnScaleBar = true;
 	}
 
 	String getLength(double barWidth) {
@@ -294,6 +289,9 @@ public class ScaleBar implements PlugIn {
 
 	void updateLocation() throws MissingRoiException {
 		Calibration cal = imp.getCalibration();
+		ImageWindow win = imp.getWindow();
+		double mag = (win!=null)?win.getCanvas().getMagnification():1.0;
+
 		barWidthInPixels = (int)(config.barWidth/cal.pixelWidth);
 		int width = imp.getWidth();
 		int height = imp.getHeight();
