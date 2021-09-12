@@ -60,8 +60,8 @@ public class ScaleBar implements PlugIn {
 			return;
 		}
 
-		boolean currentROIExists = parseCurrentROI(imp);
-		GenericDialog dialog = prepareDialog(imp, currentROIExists);
+		boolean currentROIExists = parseCurrentROI();
+		GenericDialog dialog = prepareDialog(currentROIExists);
 
 		dialog.showDialog();
 		if (dialog.wasCanceled()) {
@@ -76,14 +76,14 @@ public class ScaleBar implements PlugIn {
 			return;
 		}
 
-		parseDialog(imp, dialog);
-		labelSlices(imp);
+		parseDialog(dialog);
+		labelSlices();
 	 }
 
-	void labelSlices(ImagePlus imp) {
+	void labelSlices() {
 		if (createOverlay) return;
 		ImageStack stack = imp.getStack();
-		String units = getUnits(imp);
+		String units = getUnits();
 		for (int i=1; i<=stack.size(); i++)
 			drawScaleBar(stack.getProcessor(i), units);
 		imp.setStack(stack);
@@ -94,7 +94,7 @@ public class ScaleBar implements PlugIn {
 	 * and {roiY}, {roiWidth}, {roiHeight} to the corresponding
 	 * features of the ROI, and return true. Otherwise, return false.
 	 */
-    boolean parseCurrentROI(ImagePlus imp) {
+    boolean parseCurrentROI() {
         Roi roi = imp.getRoi();
         if (roi == null) return false;
 
@@ -106,7 +106,7 @@ public class ScaleBar implements PlugIn {
         return true;
     }
 
-	void computeDefaultBarAndFontSize(ImagePlus imp) {
+	void computeDefaultBarAndFontSize() {
 		Calibration cal = imp.getCalibration();
 
 		ImageWindow win = imp.getWindow();
@@ -136,7 +136,7 @@ public class ScaleBar implements PlugIn {
 			barHeightInPixels = (int)(defaultBarHeight/mag);
 	} 
 
-	GenericDialog prepareDialog(ImagePlus imp, boolean currentROIExists) {
+	GenericDialog prepareDialog(boolean currentROIExists) {
 		if (IJ.macroRunning()) {
 			barHeightInPixels = defaultBarHeight;
 			location = locations[LOWER_RIGHT];
@@ -147,7 +147,7 @@ public class ScaleBar implements PlugIn {
 		if (currentROIExists)
 			location = locations[AT_SELECTION];
 
-		computeDefaultBarAndFontSize(imp);
+		computeDefaultBarAndFontSize();
 
 		Calibration cal = imp.getCalibration();
 		String units = cal.getUnits();
@@ -183,7 +183,7 @@ public class ScaleBar implements PlugIn {
 		return gd;
 	}
 
-	void parseDialog(ImagePlus imp, GenericDialog gd) {
+	void parseDialog(GenericDialog gd) {
 		barWidth = gd.getNextNumber();
 		barHeightInPixels = (int)gd.getNextNumber();
 		fontSize = (int)gd.getNextNumber();
@@ -214,22 +214,22 @@ public class ScaleBar implements PlugIn {
 		}
 	}
 
-	void drawScaleBar(ImagePlus imp) {
+	void drawScaleBar() {
 		  if (!updateLocation())
 			return;
 		Undo.setup(Undo.FILTER, imp);
-		drawScaleBar(imp.getProcessor(), getUnits(imp));
+		drawScaleBar(imp.getProcessor(), getUnits());
 		imp.updateAndDraw();
 	}
 	
-	String getUnits(ImagePlus imp) {
+	String getUnits() {
 		String units = imp.getCalibration().getUnits();
 		if (units.equals("microns"))
 			units = IJ.micronSymbol+"m";
 		return units;
 	}
 
-	void createOverlay(ImagePlus imp) {
+	void createOverlay() {
 		Overlay overlay = imp.getOverlay();
 		if (overlay==null)
 			overlay = new Overlay();
@@ -242,7 +242,7 @@ public class ScaleBar implements PlugIn {
 		int fontType = boldText?Font.BOLD:Font.PLAIN;
 		String face = serifFont?"Serif":"SanSerif";
 		Font font = new Font(face, fontType, fontSize);
-		String label = getLength(barWidth) + " "+ getUnits(imp);
+		String label = getLength(barWidth) + " "+ getUnits();
 		ImageProcessor ip = imp.getProcessor();
 		ip.setFont(font);
 		int swidth = hideText?0:ip.getStringWidth(label);
@@ -341,7 +341,7 @@ public class ScaleBar implements PlugIn {
 		ImageProcessor ip = imp.getProcessor();
 		ip.setFont(new Font(font, fontType, fontSize));
 		ip.setAntialiasedText(true);
-		String label = getLength(barWidth)+" "+getUnits(imp);
+		String label = getLength(barWidth)+" "+getUnits();
 		int swidth = hideText?0:ip.getStringWidth(label);
 		int labelWidth = (swidth < barWidthInPixels)?0:(int) (barWidthInPixels-swidth)/2;
 		int x = 0;
@@ -405,13 +405,13 @@ public class ScaleBar implements PlugIn {
 				imp.updateAndDraw();
 				drawnScaleBar = false;
 			}
-			createOverlay(imp);
+			createOverlay();
 		} else {
 			if (showingOverlay) {
 				imp.setOverlay(null);
 				showingOverlay = false;
 			}
-			drawScaleBar(imp);
+			drawScaleBar();
 		}
 	}
 
