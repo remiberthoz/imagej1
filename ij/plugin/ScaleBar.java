@@ -59,7 +59,9 @@ public class ScaleBar implements PlugIn {
 			IJ.noImage();
 			return;
 		}
-		GenericDialog dialog = prepareDialog(imp);
+
+		boolean currentROIExists = parseCurrentROI(imp);
+		GenericDialog dialog = prepareDialog(imp, currentROIExists);
 
 		dialog.showDialog();
 		if (dialog.wasCanceled()) {
@@ -87,7 +89,24 @@ public class ScaleBar implements PlugIn {
 		imp.setStack(stack);
 	}
 
-	GenericDialog prepareDialog(ImagePlus imp) {
+	/**
+	 * If there is a user selected ROI, set the class variables {roiX}
+	 * and {roiY}, {roiWidth}, {roiHeight} to the corresponding
+	 * features of the ROI, and return true. Otherwise, return false.
+	 */
+    boolean parseCurrentROI(ImagePlus imp) {
+        Roi roi = imp.getRoi();
+        if (roi == null) return false;
+
+        Rectangle r = roi.getBounds();
+        roiX = r.x;
+        roiY = r.y;
+		roiWidth = r.width;
+		roiHeight = r.height;
+        return true;
+    }
+
+	GenericDialog prepareDialog(ImagePlus imp, boolean currentROIExists) {
 		if (IJ.macroRunning()) {
 			barHeightInPixels = defaultBarHeight;
 			location = locations[LOWER_RIGHT];
@@ -95,16 +114,8 @@ public class ScaleBar implements PlugIn {
 			bcolor = bcolors[0];
 			fontSize = defaultFontSize;
 		}
-		Roi roi = imp.getRoi();
-		if (roi!=null) {
-			Rectangle r = roi.getBounds();
-			roiX = r.x;
-			roiY = r.y; 
-			roiWidth = r.width;
-			roiHeight = r.height;
+		if (currentROIExists)
 			location = locations[AT_SELECTION];
-		} else if (location.equals(locations[AT_SELECTION]))
-			location = locations[UPPER_RIGHT];
 
 		Calibration cal = imp.getCalibration();
 		ImageWindow win = imp.getWindow();
