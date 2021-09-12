@@ -24,7 +24,7 @@ public class ScaleBar implements PlugIn {
 
 	ImagePlus imp;
 	int xloc, yloc;
-	int barWidthInPixels;
+	int hBarWidthInPixels;
 	int roiX, roiY, roiWidth, roiHeight;
 	boolean userRoiExists;
 	boolean[] checkboxStates = new boolean[4];
@@ -117,18 +117,18 @@ public class ScaleBar implements PlugIn {
 
 		if (currentROIExists && roiX>=0 && roiWidth>10) {
 			// If the user has a ROI, set the bar width according to ROI width.
-			config.barWidth = roiWidth*pixelWidth;
+			config.hBarWidth = roiWidth*pixelWidth;
 		}
-		else if (config.barWidth<=0.0 || config.barWidth>0.67*imageWidth) {
+		else if (config.hBarWidth<=0.0 || config.hBarWidth>0.67*imageWidth) {
 			// If the bar is of negative width or too wide for the image,
 			// set the bar width to 80 pixels.
-			config.barWidth = (80.0*pixelWidth)/mag;
-			if (config.barWidth>0.67*imageWidth)
+			config.hBarWidth = (80.0*pixelWidth)/mag;
+			if (config.hBarWidth>0.67*imageWidth)
 				// If 80 pixels is too much, do 2/3 of the image.
-				config.barWidth = 0.67*imageWidth;
-			if (config.barWidth>5.0)
+				config.hBarWidth = 0.67*imageWidth;
+			if (config.hBarWidth>5.0)
 				// If the resulting size is larger than 5 units, round the value.
-				config.barWidth = (int) config.barWidth;
+				config.hBarWidth = (int) config.hBarWidth;
 		}
 	} 
 
@@ -145,7 +145,7 @@ public class ScaleBar implements PlugIn {
 		if (currentROIExists) {
 			config.location = locations[AT_SELECTION];
 		}
-		if (config.barWidth <= 0 || currentROIExists) {
+		if (config.hBarWidth <= 0 || currentROIExists) {
 			computeDefaultBarWidth(currentROIExists);
 		}
 
@@ -155,7 +155,7 @@ public class ScaleBar implements PlugIn {
 		
 		// Create & show the dialog, then return.
 		boolean multipleSlices = imp.getStackSize() > 1;
-		GenericDialog dialog = new BarDialog(getUnits(), config.digits, multipleSlices);
+		GenericDialog dialog = new BarDialog(getHUnit(), config.hDigits, multipleSlices);
 		dialog.showDialog();
 		return dialog.wasOKed();
 	}
@@ -176,25 +176,24 @@ public class ScaleBar implements PlugIn {
 	 */
 	void createScaleBarDrawing(boolean previewOnly) {
 		if (previewOnly) {
-			drawScaleBarOnImageProcessor(imp.getProcessor(), getUnits());
+			drawScaleBarOnImageProcessor(imp.getProcessor());
 			imp.updateAndDraw();
 		} else {
 			ImageStack stack = imp.getStack();
-			String units = getUnits();
 			for (int i=1; i<=stack.size(); i++)
-				drawScaleBarOnImageProcessor(stack.getProcessor(i), units);
+				drawScaleBarOnImageProcessor(stack.getProcessor(i));
 			imp.setStack(stack);
 		}
 	}
 	
 	/**
-	 * Return the length unit string defined in the image calibration.
+	 * Return the X unit strings defined in the image calibration.
 	 */
-	String getUnits() {
-		String units = imp.getCalibration().getUnits();
-		if (units.equals("microns"))
-			units = IJ.micronSymbol+"m";
-		return units;
+	String getHUnit() {
+		String hUnits = imp.getCalibration().getXUnit();
+		if (hUnits.equals("microns"))
+			hUnits = IJ.micronSymbol+"m";
+		return hUnits;
 	}
 
 	/**
@@ -211,35 +210,35 @@ public class ScaleBar implements PlugIn {
 		int fontType = config.boldText?Font.BOLD:Font.PLAIN;
 		String face = config.serifFont?"Serif":"SanSerif";
 		Font font = new Font(face, fontType, config.fontSize);
-		String label = getLabel();
+		String hLabel = getHLabel();
 		ImageProcessor ip = imp.getProcessor();
 		ip.setFont(font);
-		int swidth = config.hideText?0:ip.getStringWidth(label);
-		int xoffset = (barWidthInPixels - swidth)/2;
-		int yoffset =  config.barHeightInPixels + (config.hideText?0:config.fontSize+config.fontSize/4);
+		int hLabelWidth = config.hideText?0:ip.getStringWidth(hLabel);
+		int xHOffset = (hBarWidthInPixels - hLabelWidth)/2;
+		int yHOffset =  config.barThicknessInPixels + (config.hideText?0:config.fontSize+config.fontSize/4);
 		if (bcolor!=null) {
-			int w = barWidthInPixels;
-			int h = yoffset;
-			if (w<swidth) w = swidth;
+			int hWidth = hBarWidthInPixels;
+			int hHeight = yHOffset;
+			if (hWidth<hLabelWidth) hWidth = hLabelWidth;
 			int x2 = x;
-			if (x+xoffset<x2) x2 = x + xoffset;
-			int margin = w/20;
+			if (x+xHOffset<x2) x2 = x + xHOffset;
+			int margin = hWidth/20;
 			if (margin<2) margin = 2;
 			x2 -= margin;
 			int y2 = y - margin;
-			w = w+ margin*2;
-			h = h+ margin*2;
-			Roi background = new Roi(x2, y2, w, h);
+			hWidth = hWidth+ margin*2;
+			hHeight = hHeight+ margin*2;
+			Roi background = new Roi(x2, y2, hWidth, hHeight);
 			background.setFillColor(bcolor);
 			overlay.add(background, SCALE_BAR);
 		}
-		Roi bar = new Roi(x, y, barWidthInPixels, config.barHeightInPixels);
-		bar.setFillColor(color);
-		overlay.add(bar, SCALE_BAR);
+		Roi hBar = new Roi(x, y, hBarWidthInPixels, config.barThicknessInPixels);
+		hBar.setFillColor(color);
+		overlay.add(hBar, SCALE_BAR);
 		if (!config.hideText) {
-			TextRoi text = new TextRoi(x+xoffset, y+config.barHeightInPixels, label, font);
-			text.setStrokeColor(color);
-			overlay.add(text, SCALE_BAR);
+			TextRoi hText = new TextRoi(x+xHOffset, y+config.barThicknessInPixels, hLabel, font);
+			hText.setStrokeColor(color);
+			overlay.add(hText, SCALE_BAR);
 		}
 		imp.setOverlay(overlay);
 	}
@@ -247,7 +246,7 @@ public class ScaleBar implements PlugIn {
 	/**
 	 * Draw the scalebar on pixels of the {ip} ImageProcessor.
 	 */
-	void drawScaleBarOnImageProcessor(ImageProcessor ip, String units) {
+	void drawScaleBarOnImageProcessor(ImageProcessor ip) {
 		Color color = getColor();
 		Color bcolor = getBColor();
 		int x = xloc;
@@ -256,49 +255,49 @@ public class ScaleBar implements PlugIn {
 		String font = config.serifFont?"Serif":"SanSerif";
 		ip.setFont(new Font(font, fontType, config.fontSize));
 		ip.setAntialiasedText(true);
-		String label = getLabel();
-		int swidth = config.hideText?0:ip.getStringWidth(label);
-		int xoffset = (barWidthInPixels - swidth)/2;
-		int yoffset =  config.barHeightInPixels + (config.hideText?0:config.fontSize+config.fontSize/(config.serifFont?8:4));
+		String hLabel = getHLabel();
+		int hLabelWidth = config.hideText?0:ip.getStringWidth(hLabel);
+		int xHOffset = (hBarWidthInPixels - hLabelWidth)/2;
+		int yHOffset =  config.barThicknessInPixels + (config.hideText?0:config.fontSize+config.fontSize/(config.serifFont?8:4));
 
 		// Draw bkgnd box first,  based on bar width and height (and font size if hideText is not checked)
 		if (bcolor!=null) {
-			int w = barWidthInPixels;
-			int h = yoffset;
-			if (w<swidth) w = swidth;
+			int hWidth = hBarWidthInPixels;
+			int hHeight = yHOffset;
+			if (hWidth<hLabelWidth) hWidth = hLabelWidth;
 			int x2 = x;
-			if (x+xoffset<x2) x2 = x + xoffset;
-			int margin = w/20;
+			if (x+xHOffset<x2) x2 = x + xHOffset;
+			int margin = hWidth/20;
 			if (margin<2) margin = 2;
 			x2 -= margin;
 			int y2 = y - margin;
-			w = w+ margin*2;
-			h = h+ margin*2;
+			hWidth = hWidth+ margin*2;
+			hHeight = hHeight+ margin*2;
 			ip.setColor(bcolor);
-			ip.setRoi(x2, y2, w, h);
+			ip.setRoi(x2, y2, hWidth, hHeight);
 			ip.fill();
 		}
 		
 		ip.resetRoi();
 		ip.setColor(color);
-		ip.setRoi(x, y, barWidthInPixels, config.barHeightInPixels);
+		ip.setRoi(x, y, hBarWidthInPixels, config.barThicknessInPixels);
 		ip.fill();
 		ip.resetRoi();
 		if (!config.hideText)
-			ip.drawString(label, x+xoffset, y+yoffset);
+			ip.drawString(hLabel, x+xHOffset, y+yHOffset);
 	}
 
 	/**
 	 * Returns the text to draw near the scalebar (<width> <unit>).
 	 */
-	String getLabel() {
-		return IJ.d2s(config.barWidth, config.digits) + " " + getUnits();
+	String getHLabel() {
+		return IJ.d2s(config.hBarWidth, config.hDigits) + " " + getHUnit();
 	}
 
-	int computeLabelWidthInPixels() {
+	int computeHLabelWidthInPixels() {
 		ImageProcessor ip = imp.getProcessor();
-		int swidth = config.hideText?0:ip.getStringWidth(getLabel());
-		return (swidth < barWidthInPixels)?0:(int) (barWidthInPixels-swidth)/2;
+		int hLabelWidth = config.hideText?0:ip.getStringWidth(getHLabel());
+		return (hLabelWidth < hBarWidthInPixels)?0:(int) (hBarWidthInPixels-hLabelWidth)/2;
 	}
 
 	void updateFont() {
@@ -314,28 +313,28 @@ public class ScaleBar implements PlugIn {
 		ImageWindow win = imp.getWindow();
 		double mag = (win!=null)?win.getCanvas().getMagnification():1.0;
 
-		barWidthInPixels = (int)(config.barWidth/cal.pixelWidth);
-		int width = imp.getWidth();
-		int height = imp.getHeight();
-		int margin = (width+height)/100;
+		hBarWidthInPixels = (int)(config.hBarWidth/cal.pixelWidth);
+		int imageWidth = imp.getWidth();
+		int imageHeight = imp.getHeight();
+		int margin = (imageWidth+imageHeight)/100;
 		if (mag==1.0)
 			margin = (int)(margin*1.5);
 		updateFont();
-		int labelWidth = computeLabelWidthInPixels();
+		int hLabelWidth = computeHLabelWidthInPixels();
 		int x = 0;
 		int y = 0;
 		if (config.location.equals(locations[UPPER_RIGHT])) {
-			x = width - margin - barWidthInPixels + labelWidth;
+			x = imageWidth - margin - hBarWidthInPixels + hLabelWidth;
 			y = margin;
 		} else if (config.location.equals(locations[LOWER_RIGHT])) {
-			x = width - margin - barWidthInPixels + labelWidth;
-			y = height - margin - config.barHeightInPixels - config.fontSize;
+			x = imageWidth - margin - hBarWidthInPixels + hLabelWidth;
+			y = imageHeight - margin - config.barThicknessInPixels - config.fontSize;
 		} else if (config.location.equals(locations[UPPER_LEFT])) {
-			x = margin - labelWidth;
+			x = margin - hLabelWidth;
 			y = margin;
 		} else if (config.location.equals(locations[LOWER_LEFT])) {
-			x = margin - labelWidth;
-			y = height - margin - config.barHeightInPixels - config.fontSize;
+			x = margin - hLabelWidth;
+			y = imageHeight - margin - config.barThicknessInPixels - config.fontSize;
 		} else {
 			if (!userRoiExists)
 				throw new MissingRoiException();
@@ -401,12 +400,13 @@ public class ScaleBar implements PlugIn {
 
 		private boolean multipleSlices;
 
-		BarDialog(String units, int digits, boolean multipleSlices) {
+		BarDialog(String hUnits, int hDigits, boolean multipleSlices) {
 			super("Scale Bar");
 			this.multipleSlices = multipleSlices;
 
-			addNumericField("Width in "+units+": ", config.barWidth, digits);
-			addNumericField("Height in pixels: ", config.barHeightInPixels, 0);
+			addNumericField("Width in "+hUnits+": ", config.hBarWidth, hDigits);
+			addNumericField("Height in "+"<vUnits>"+": ", 0, 0);
+			addNumericField("Thickness in pixels: ", config.barThicknessInPixels, 0);
 			addNumericField("Font size: ", config.fontSize, 0);
 			addChoice("Color: ", colors, config.color);
 			addChoice("Background: ", bcolors, config.bcolor);
@@ -426,17 +426,17 @@ public class ScaleBar implements PlugIn {
 		}
 
 		public void textValueChanged(TextEvent e) {
-			TextField widthField = ((TextField)numberField.elementAt(0));
-			Double d = getValue(widthField.getText());
+			TextField hWidthField = ((TextField)numberField.elementAt(0));
+			Double d = getValue(hWidthField.getText());
 			if (d==null)
 				return;
-			config.barWidth = d.doubleValue();
-			TextField heightField = ((TextField)numberField.elementAt(1));
-			d = getValue(heightField.getText());
+			config.hBarWidth = d.doubleValue();
+			TextField thicknessField = ((TextField)numberField.elementAt(2));
+			d = getValue(thicknessField.getText());
 			if (d==null)
 				return;
-			config.barHeightInPixels = (int)d.doubleValue();
-			TextField fontSizeField = ((TextField)numberField.elementAt(2));
+			config.barThicknessInPixels = (int)d.doubleValue();
+			TextField fontSizeField = ((TextField)numberField.elementAt(3));
 			d = getValue(fontSizeField.getText());
 			if (d==null)
 				return;
@@ -444,12 +444,12 @@ public class ScaleBar implements PlugIn {
 			if (size>5)
 				config.fontSize = size;
 
-			String widthString = widthField.getText();
+			String widthString = hWidthField.getText();
 			boolean hasDecimalPoint = false;
-			config.digits = 0;
+			config.hDigits = 0;
 			for (int i = 0; i < widthString.length(); i++) {
 				if (hasDecimalPoint) {
-					config.digits += 1;
+					config.hDigits += 1;
 				}
 				if (widthString.charAt(i) == '.') {
 					hasDecimalPoint = true;
@@ -486,9 +486,9 @@ public class ScaleBar implements PlugIn {
 	
 		private static int defaultBarHeight = 4;
 
-		double barWidth;
-		int digits;  // The number of digits after the decimal point that the user input in the dialog for barWidth.
-		int barHeightInPixels;
+		double hBarWidth;
+		int hDigits;  // The number of digits after the decimal point that the user input in the dialog for vBarWidth.
+		int barThicknessInPixels;
 		String location;
 		String color;
 		String bcolor;
@@ -503,8 +503,8 @@ public class ScaleBar implements PlugIn {
 		 * Create ScaleBarConfiguration with default values.
 		 */
 		ScaleBarConfiguration() {
-			this.barWidth = -1;
-			this.barHeightInPixels = defaultBarHeight;
+			this.hBarWidth = -1;
+			this.barThicknessInPixels = defaultBarHeight;
 			this.location = locations[LOWER_RIGHT];
 			this.color = colors[0];
 			this.bcolor = bcolors[0];
@@ -524,9 +524,9 @@ public class ScaleBar implements PlugIn {
 		}
 		
 		void updateFrom(ScaleBarConfiguration model) {
-			this.barWidth = model.barWidth;
-			this.digits = model.digits;
-			this.barHeightInPixels = model.barHeightInPixels;
+			this.hBarWidth = model.hBarWidth;
+			this.hDigits = model.hDigits;
+			this.barThicknessInPixels = model.barThicknessInPixels;
 			this.location = locations[LOWER_RIGHT];
 			this.color = model.color;
 			this.bcolor = model.bcolor;
