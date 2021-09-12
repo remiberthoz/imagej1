@@ -466,6 +466,6 @@ public class ScaleBar implements PlugIn {
 		MissingRoiException() {
 			super("Scalebar location is set to AT_SELECTION but there is no selection on the image.");
 		}
-   }
+   } //MissingRoiException inner class
 
 } //ScaleBar class
