@@ -525,7 +525,7 @@ public class ScaleBar implements PlugIn {
 				if (hasDecimalPoint) {
 					config.vDigits += 1;
 				}
-				if (widthString.charAt(i) == '.') {
+				if (heightString.charAt(i) == '.') {
 					hasDecimalPoint = true;
 				}
 			}
