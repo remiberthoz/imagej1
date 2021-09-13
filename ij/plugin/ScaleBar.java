@@ -231,88 +231,100 @@ public class ScaleBar implements PlugIn {
 		Overlay overlay = imp.getOverlay();
 		if (overlay==null)
 			overlay = new Overlay();
+
 		Color color = getColor();
 		Color bcolor = getBColor();
-		int x = xloc;
-		int y = yloc;
+		
 		int fontType = config.boldText?Font.BOLD:Font.PLAIN;
 		String face = config.serifFont?"Serif":"SanSerif";
 		Font font = new Font(face, fontType, config.fontSize);
-		String hLabel = getHLabel();
 		ImageProcessor ip = imp.getProcessor();
 		ip.setFont(font);
-		int hLabelWidth = config.hideText?0:ip.getStringWidth(hLabel);
-		int xHOffset = (hBarWidthInPixels - hLabelWidth)/2;
-		int yHOffset =  config.barThicknessInPixels + (config.hideText?0:config.fontSize+config.fontSize/4);
-		if (bcolor!=null) {
-			int hWidth = hBarWidthInPixels;
-			int hHeight = yHOffset;
-			if (hWidth<hLabelWidth) hWidth = hLabelWidth;
-			int x2 = x;
-			if (x+xHOffset<x2) x2 = x + xHOffset;
-			int margin = hWidth/20;
-			if (margin<2) margin = 2;
-			x2 -= margin;
-			int y2 = y - margin;
-			hWidth = hWidth+ margin*2;
-			hHeight = hHeight+ margin*2;
-			Roi background = new Roi(x2, y2, hWidth, hHeight);
-			background.setFillColor(bcolor);
-			overlay.add(background, SCALE_BAR);
+
+		Rectangle[] r = getElementsPosition(ip);
+		Rectangle hBackground = r[0];
+		Rectangle hBar = r[1];
+		Rectangle hText = r[2];
+
+		if (bcolor != null) {
+			Roi hBackgroundRoi = new Roi(hBackground.x, hBackground.y, hBackground.width, hBackground.height);
+			hBackgroundRoi.setFillColor(bcolor);
+			overlay.add(hBackgroundRoi, SCALE_BAR);
 		}
-		Roi hBar = new Roi(x, y, hBarWidthInPixels, config.barThicknessInPixels);
-		hBar.setFillColor(color);
-		overlay.add(hBar, SCALE_BAR);
+		Roi hBarRoi = new Roi(hBar.x, hBar.y, hBar.width, hBar.height);
+		hBarRoi.setFillColor(color);
+		overlay.add(hBarRoi, SCALE_BAR);
+
 		if (!config.hideText) {
-			TextRoi hText = new TextRoi(x+xHOffset, y+config.barThicknessInPixels, hLabel, font);
-			hText.setStrokeColor(color);
-			overlay.add(hText, SCALE_BAR);
+			TextRoi hTextRoi = new TextRoi(hText.x, hText.y - hText.height, getHLabel(), font);
+			hTextRoi.setStrokeColor(color);
+			overlay.add(hTextRoi, SCALE_BAR);
 		}
 		imp.setOverlay(overlay);
+	}
+
+	Rectangle[] getElementsPosition(ImageProcessor ip) {
+		Rectangle hBackground = new Rectangle();
+		Rectangle hBar = new Rectangle();
+		Rectangle hText = new Rectangle();
+
+		int textGap = config.fontSize/(config.serifFont?8:4);
+
+		hBar.x = xloc;
+		hBar.y = yloc;
+		hBar.width = hBarWidthInPixels;
+		hBar.height = config.barThicknessInPixels;
+
+		hText.width = config.hideText ? 0 : ip.getStringWidth(getHLabel());
+		hText.height = config.hideText ? 0 : (textGap + ip.getStringBounds(getHLabel()).height);
+		hText.x = xloc + (hBarWidthInPixels - hText.width) / 2;
+		hText.y = yloc + config.barThicknessInPixels + hText.height;
+
+		int hBoxWidth = Math.max(hBarWidthInPixels, hText.width);  // Box that contains the text and the bar (without the background)
+		int margin = Math.max(hBoxWidth/20, 2);
+
+		hBackground.x = xloc - margin;
+		hBackground.y = yloc - margin;
+		hBackground.width = margin + hBoxWidth + margin;
+		hBackground.height = margin + config.barThicknessInPixels + hText.height + margin;
+
+		Rectangle[] r = {hBackground, hBar, hText};
+		return r;
 	}
 	
 	/**
 	 * Draw the scalebar on pixels of the {ip} ImageProcessor.
 	 */
 	void drawScaleBarOnImageProcessor(ImageProcessor ip) {
+
 		Color color = getColor();
 		Color bcolor = getBColor();
-		int x = xloc;
-		int y = yloc;
+		
 		int fontType = config.boldText?Font.BOLD:Font.PLAIN;
 		String font = config.serifFont?"Serif":"SanSerif";
 		ip.setFont(new Font(font, fontType, config.fontSize));
 		ip.setAntialiasedText(true);
-		String hLabel = getHLabel();
-		int hLabelWidth = config.hideText?0:ip.getStringWidth(hLabel);
-		int xHOffset = (hBarWidthInPixels - hLabelWidth)/2;
-		int yHOffset =  config.barThicknessInPixels + (config.hideText?0:config.fontSize+config.fontSize/(config.serifFont?8:4));
 
-		// Draw bkgnd box first,  based on bar width and height (and font size if hideText is not checked)
-		if (bcolor!=null) {
-			int hWidth = hBarWidthInPixels;
-			int hHeight = yHOffset;
-			if (hWidth<hLabelWidth) hWidth = hLabelWidth;
-			int x2 = x;
-			if (x+xHOffset<x2) x2 = x + xHOffset;
-			int margin = hWidth/20;
-			if (margin<2) margin = 2;
-			x2 -= margin;
-			int y2 = y - margin;
-			hWidth = hWidth+ margin*2;
-			hHeight = hHeight+ margin*2;
+		Rectangle[] r = getElementsPosition(ip);
+		Rectangle hBackground = r[0];
+		Rectangle hBar = r[1];
+		Rectangle hText = r[2];
+
+		if (bcolor != null) {
 			ip.setColor(bcolor);
-			ip.setRoi(x2, y2, hWidth, hHeight);
+			ip.setRoi(hBackground.x, hBackground.y, hBackground.width, hBackground.height);
 			ip.fill();
 		}
-		
 		ip.resetRoi();
+
 		ip.setColor(color);
-		ip.setRoi(x, y, hBarWidthInPixels, config.barThicknessInPixels);
+		ip.setRoi(hBar.x, hBar.y, hBar.width, hBar.height);
 		ip.fill();
 		ip.resetRoi();
+
+		ip.setColor(color);
 		if (!config.hideText)
-			ip.drawString(hLabel, x+xHOffset, y+yHOffset);
+			ip.drawString(getHLabel(), hText.x, hText.y);
 	}
 
 	/**
