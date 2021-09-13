@@ -459,6 +459,8 @@ public class ScaleBar implements PlugIn {
 			super("Scale Bar");
 			this.multipleSlices = multipleSlices;
 
+			hvCheckboxStates[0] = config.showHorizontal; hvCheckboxStates[1] = config.showVertical;
+			addCheckboxGroup(1, 2, hvCheckboxLabels, hvCheckboxStates);
 			addNumericField("Width in "+hUnits+": ", config.hBarWidth, hDigits);
 			addNumericField("Height in "+vUnits+": ", config.vBarHeight, vDigits);
 			addNumericField("Thickness in pixels: ", config.barThicknessInPixels, 0);
@@ -538,12 +540,14 @@ public class ScaleBar implements PlugIn {
 			config.bcolor = bcol.getSelectedItem();
 			Choice loc = (Choice)(choice.elementAt(2));
 			config.location = loc.getSelectedItem();
-			config.boldText = ((Checkbox)(checkbox.elementAt(0))).getState();
-			config.hideText = ((Checkbox)(checkbox.elementAt(1))).getState();
-			config.serifFont = ((Checkbox)(checkbox.elementAt(2))).getState();
-			config.useOverlay = ((Checkbox)(checkbox.elementAt(3))).getState();
+			config.showHorizontal = ((Checkbox)(checkbox.elementAt(0))).getState();
+			config.showVertical = ((Checkbox)(checkbox.elementAt(1))).getState();
+			config.boldText = ((Checkbox)(checkbox.elementAt(2))).getState();
+			config.hideText = ((Checkbox)(checkbox.elementAt(3))).getState();
+			config.serifFont = ((Checkbox)(checkbox.elementAt(4))).getState();
+			config.useOverlay = ((Checkbox)(checkbox.elementAt(5))).getState();
 			if (multipleSlices)
-				config.labelAll = ((Checkbox)(checkbox.elementAt(4))).getState();
+				config.labelAll = ((Checkbox)(checkbox.elementAt(6))).getState();
 			updateScalebar(true);
 		}
 
@@ -559,6 +563,8 @@ public class ScaleBar implements PlugIn {
 	
 		private static int defaultBarHeight = 4;
 
+		boolean showHorizontal;
+		boolean showVertical;
 		double hBarWidth;
 		double vBarHeight;
 		int hDigits;  // The number of digits after the decimal point that the user input in the dialog for vBarWidth.
@@ -578,6 +584,8 @@ public class ScaleBar implements PlugIn {
 		 * Create ScaleBarConfiguration with default values.
 		 */
 		ScaleBarConfiguration() {
+			this.showHorizontal = true;
+			this.showVertical = false;
 			this.hBarWidth = -1;
 			this.vBarHeight = -1;
 			this.barThicknessInPixels = defaultBarHeight;
@@ -600,6 +608,8 @@ public class ScaleBar implements PlugIn {
 		}
 		
 		void updateFrom(ScaleBarConfiguration model) {
+			this.showHorizontal = model.showHorizontal;
+			this.showVertical = model.showVertical;
 			this.hBarWidth = model.hBarWidth;
 			this.vBarHeight = model.vBarHeight;
 			this.hDigits = model.hDigits;
