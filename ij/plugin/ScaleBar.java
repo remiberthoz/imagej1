@@ -16,6 +16,7 @@ public class ScaleBar implements PlugIn {
 	static final int UPPER_RIGHT=0, LOWER_RIGHT=1, LOWER_LEFT=2, UPPER_LEFT=3, AT_SELECTION=4;
 	static final String[] colors = {"White","Black","Light Gray","Gray","Dark Gray","Red","Green","Blue","Yellow"};
 	static final String[] bcolors = {"None","Black","White","Dark Gray","Gray","Light Gray","Yellow","Blue","Green","Red"};
+	static final String[] hvCheckboxLabels = {"Horizontal", "Vertical"};
 	static final String[] checkboxLabels = {"Bold Text", "Hide Text", "Serif Font", "Overlay"};
 	final static String SCALE_BAR = "|SB|";
 	
@@ -28,6 +29,7 @@ public class ScaleBar implements PlugIn {
 	int vBarHeightInPixels;
 	int roiX, roiY, roiWidth, roiHeight;
 	boolean userRoiExists;
+	boolean[] hvCheckboxStates = new boolean[2];
 	boolean[] checkboxStates = new boolean[4];
 
 	/**
@@ -245,50 +247,98 @@ public class ScaleBar implements PlugIn {
 		Rectangle hBackground = r[0];
 		Rectangle hBar = r[1];
 		Rectangle hText = r[2];
+		Rectangle vBackground = r[3];
+		Rectangle vBar = r[4];
+		Rectangle vText = r[5];
 
 		if (bcolor != null) {
-			Roi hBackgroundRoi = new Roi(hBackground.x, hBackground.y, hBackground.width, hBackground.height);
-			hBackgroundRoi.setFillColor(bcolor);
-			overlay.add(hBackgroundRoi, SCALE_BAR);
+			if (config.showHorizontal) {
+				Roi hBackgroundRoi = new Roi(hBackground.x, hBackground.y, hBackground.width, hBackground.height);
+				hBackgroundRoi.setFillColor(bcolor);
+				overlay.add(hBackgroundRoi, SCALE_BAR);
+			}
+			if (config.showVertical) {
+				Roi vBackgroundRoi = new Roi(vBackground.x, vBackground.y, vBackground.width, vBackground.height);
+				vBackgroundRoi.setFillColor(bcolor);
+				overlay.add(vBackgroundRoi, SCALE_BAR);
+			}
 		}
-		Roi hBarRoi = new Roi(hBar.x, hBar.y, hBar.width, hBar.height);
-		hBarRoi.setFillColor(color);
-		overlay.add(hBarRoi, SCALE_BAR);
+
+		if (config.showHorizontal) {
+			Roi hBarRoi = new Roi(hBar.x, hBar.y, hBar.width, hBar.height);
+			hBarRoi.setFillColor(color);
+			overlay.add(hBarRoi, SCALE_BAR);
+		}
+		if (config.showVertical) {
+			Roi vBarRoi = new Roi(vBar.x, vBar.y, vBar.width, vBar.height);
+			vBarRoi.setFillColor(color);
+			overlay.add(vBarRoi, SCALE_BAR);
+		}
 
 		if (!config.hideText) {
-			TextRoi hTextRoi = new TextRoi(hText.x, hText.y - hText.height, getHLabel(), font);
-			hTextRoi.setStrokeColor(color);
-			overlay.add(hTextRoi, SCALE_BAR);
+			if (config.showHorizontal) {
+				TextRoi hTextRoi = new TextRoi(hText.x, hText.y - hText.height, getHLabel(), font);
+				hTextRoi.setStrokeColor(color);
+				overlay.add(hTextRoi, SCALE_BAR);
+			}
+			if (config.showVertical) {
+				TextRoi vTextRoi = new TextRoi(vText.x, vText.y, getVLabel(), font);
+				vTextRoi.setStrokeColor(color);
+				vTextRoi.setAngle(90.0);
+				overlay.add(vTextRoi, SCALE_BAR);
+			}
 		}
+
 		imp.setOverlay(overlay);
+		// TODO use imp.drawOverlay() instead of the other method, will simplify everything a great deal!
 	}
 
 	Rectangle[] getElementsPosition(ImageProcessor ip) {
 		Rectangle hBackground = new Rectangle();
 		Rectangle hBar = new Rectangle();
 		Rectangle hText = new Rectangle();
+		Rectangle vBackground = new Rectangle();
+		Rectangle vBar = new Rectangle();
+		Rectangle vText = new Rectangle();
+
+		boolean upper = config.location.equals(locations[UPPER_RIGHT]) || config.location.equals(locations[UPPER_LEFT]);
+		boolean right = config.location.equals(locations[UPPER_RIGHT]) || config.location.equals(locations[LOWER_RIGHT]);
 
 		int textGap = config.fontSize/(config.serifFont?8:4);
 
 		hBar.x = xloc;
-		hBar.y = yloc;
+		hBar.y = yloc + (config.showVertical ? computeVLabelHeightInPixels() : 0);
 		hBar.width = hBarWidthInPixels;
 		hBar.height = config.barThicknessInPixels;
 
+		vBar.x = hBar.x + (right ? (hBar.width - config.barThicknessInPixels) : 0);
+		vBar.y = hBar.y + (upper ? 0 : - vBarHeightInPixels + config.barThicknessInPixels);
+		vBar.width = config.barThicknessInPixels;
+		vBar.height = vBarHeightInPixels;
+
 		hText.width = config.hideText ? 0 : ip.getStringWidth(getHLabel());
 		hText.height = config.hideText ? 0 : (textGap + ip.getStringBounds(getHLabel()).height);
-		hText.x = xloc + (hBarWidthInPixels - hText.width) / 2;
-		hText.y = yloc + config.barThicknessInPixels + hText.height;
+		hText.x = hBar.x + (hBarWidthInPixels - hText.width) / 2;
+		hText.y = hBar.y + config.barThicknessInPixels + hText.height;
 
-		int hBoxWidth = Math.max(hBarWidthInPixels, hText.width);  // Box that contains the text and the bar (without the background)
-		int margin = Math.max(hBoxWidth/20, 2);
+		vText.width = config.hideText ? 0 : (textGap + ip.getStringBounds(getVLabel()).height);
+		vText.height = config.hideText ? 0 : ip.getStringWidth(getVLabel());
+		vText.x = vBar.x + (right ? config.barThicknessInPixels : - vText.width);
+		vText.y = vBar.y + (vBarHeightInPixels + vText.height) / 2;
 
-		hBackground.x = xloc - margin;
-		hBackground.y = yloc - margin;
-		hBackground.width = margin + hBoxWidth + margin;
+		int margin = Math.max(computeHLabelWidthInPixels()/20, 2);
+
+		hBackground.x = hBar.x - margin;
+		hBackground.y = hBar.y - margin;
+		hBackground.width = margin + hBarWidthInPixels + computeHLabelWidthInPixels() + margin;
 		hBackground.height = margin + config.barThicknessInPixels + hText.height + margin;
 
-		Rectangle[] r = {hBackground, hBar, hText};
+		vBackground.x = vBar.x - margin - (right ? 0 : vText.width);
+		vBackground.y = vBar.y - margin;
+		vBackground.width = margin + config.barThicknessInPixels + vText.width + margin;
+		vBackground.height = margin + vBarHeightInPixels + computeVLabelHeightInPixels() + margin + (upper ? 0 : hText.height);
+
+		Rectangle[] r = {hBackground, hBar, hText, vBackground, vBar, vText};
 		return r;
 	}
 	
@@ -309,22 +359,44 @@ public class ScaleBar implements PlugIn {
 		Rectangle hBackground = r[0];
 		Rectangle hBar = r[1];
 		Rectangle hText = r[2];
+		Rectangle vBackground = r[3];
+		Rectangle vBar = r[4];
+		Rectangle vText = r[5];
 
 		if (bcolor != null) {
-			ip.setColor(bcolor);
-			ip.setRoi(hBackground.x, hBackground.y, hBackground.width, hBackground.height);
-			ip.fill();
+			if (config.showHorizontal) {
+				ip.setColor(bcolor);
+				ip.setRoi(hBackground.x, hBackground.y, hBackground.width, hBackground.height);
+				ip.fill();
+				ip.resetRoi();
+			}
+			if (config.showVertical) {
+				ip.setColor(bcolor);
+				ip.setRoi(vBackground.x, vBackground.y, vBackground.width, vBackground.height);
+				ip.fill();
+				ip.resetRoi();
+			}
 		}
-		ip.resetRoi();
 
 		ip.setColor(color);
-		ip.setRoi(hBar.x, hBar.y, hBar.width, hBar.height);
-		ip.fill();
-		ip.resetRoi();
+		if (config.showHorizontal) {
+			ip.setRoi(hBar.x, hBar.y, hBar.width, hBar.height);
+			ip.fill();
+			ip.resetRoi();
+		}
+		if (config.showVertical) {
+			ip.setRoi(vBar.x, vBar.y, vBar.width, vBar.height);
+			ip.fill();
+			ip.resetRoi();
+		}
 
 		ip.setColor(color);
-		if (!config.hideText)
-			ip.drawString(getHLabel(), hText.x, hText.y);
+		if (!config.hideText) {
+			if (config.showHorizontal)
+				ip.drawString(getHLabel(), hText.x, hText.y);
+			if (config.showVertical)
+				ip.drawString(getVLabel(), vText.x, vText.y);
+		}
 	}
 
 	/**
@@ -375,21 +447,21 @@ public class ScaleBar implements PlugIn {
 			margin = (int)(margin*1.5);
 		updateFont();
 		int hLabelWidth = computeHLabelWidthInPixels();
-		int vLabelHeight = computeVLabelHeightInPixels();
+		int fontSize = config.hideText ? 0 : config.fontSize;
 		int x = 0;
 		int y = 0;
 		if (config.location.equals(locations[UPPER_RIGHT])) {
-			x = imageWidth - margin - hBarWidthInPixels + hLabelWidth;
+			x = imageWidth - margin - (config.showVertical ? fontSize : 0) - hBarWidthInPixels + hLabelWidth;
 			y = margin;
 		} else if (config.location.equals(locations[LOWER_RIGHT])) {
-			x = imageWidth - margin - hBarWidthInPixels + hLabelWidth;
-			y = imageHeight - margin - config.barThicknessInPixels - config.fontSize;
+			x = imageWidth - margin - (config.showVertical ? fontSize : 0) - hBarWidthInPixels + hLabelWidth;
+			y = imageHeight - margin - config.barThicknessInPixels - fontSize;
 		} else if (config.location.equals(locations[UPPER_LEFT])) {
-			x = margin - hLabelWidth;
+			x = margin - hLabelWidth + (config.showVertical ? fontSize : 0);
 			y = margin;
 		} else if (config.location.equals(locations[LOWER_LEFT])) {
-			x = margin - hLabelWidth;
-			y = imageHeight - margin - config.barThicknessInPixels - config.fontSize;
+			x = margin - hLabelWidth + (config.showVertical ? fontSize : 0);
+			y = imageHeight - margin - config.barThicknessInPixels - fontSize;
 		} else {
 			if (!userRoiExists)
 				throw new MissingRoiException();
