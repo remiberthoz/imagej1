@@ -16,8 +16,7 @@ public class ScaleBar implements PlugIn {
 	static final int UPPER_RIGHT=0, LOWER_RIGHT=1, LOWER_LEFT=2, UPPER_LEFT=3, AT_SELECTION=4;
 	static final String[] colors = {"White","Black","Light Gray","Gray","Dark Gray","Red","Green","Blue","Yellow"};
 	static final String[] bcolors = {"None","Black","White","Dark Gray","Gray","Light Gray","Yellow","Blue","Green","Red"};
-	static final String[] hvCheckboxLabels = {"Horizontal", "Vertical"};
-	static final String[] checkboxLabels = {"Bold Text", "Hide Text", "Serif Font", "Overlay"};
+	static final String[] checkboxLabels = {"Horizontal", "Vertical", "Bold Text", "Hide Text", "Serif Font", "Overlay"};
 	final static String SCALE_BAR = "|SB|";
 	
 	private static final ScaleBarConfiguration sConfig = new ScaleBarConfiguration();
@@ -29,8 +28,7 @@ public class ScaleBar implements PlugIn {
 	int vBarHeightInPixels;
 	int roiX, roiY, roiWidth, roiHeight;
 	boolean userRoiExists;
-	boolean[] hvCheckboxStates = new boolean[2];
-	boolean[] checkboxStates = new boolean[4];
+	boolean[] checkboxStates = new boolean[6];
 
 	/**
 	 * This method is called when the plugin is loaded. 'arg', which
@@ -476,8 +474,6 @@ public class ScaleBar implements PlugIn {
 			super("Scale Bar");
 			this.multipleSlices = multipleSlices;
 
-			hvCheckboxStates[0] = config.showHorizontal; hvCheckboxStates[1] = config.showVertical;
-			addCheckboxGroup(1, 2, hvCheckboxLabels, hvCheckboxStates);
 			addNumericField("Width in "+hUnits+": ", config.hBarWidth, hDigits);
 			addNumericField("Height in "+vUnits+": ", config.vBarHeight, vDigits);
 			addNumericField("Thickness in pixels: ", config.barThicknessInPixels, 0);
@@ -485,10 +481,11 @@ public class ScaleBar implements PlugIn {
 			addChoice("Color: ", colors, config.color);
 			addChoice("Background: ", bcolors, config.bcolor);
 			addChoice("Location: ", locations, config.location);
-			checkboxStates[0] = config.boldText; checkboxStates[1] = config.hideText;
-			checkboxStates[2] = config.serifFont; checkboxStates[3] = config.useOverlay;
+			checkboxStates[0] = config.showHorizontal; checkboxStates[1] = config.showVertical;
+			checkboxStates[2] = config.boldText; checkboxStates[3] = config.hideText;
+			checkboxStates[4] = config.serifFont; checkboxStates[5] = config.useOverlay;
 			setInsets(10, 25, 0);
-			addCheckboxGroup(2, 2, checkboxLabels, checkboxStates);
+			addCheckboxGroup(3, 2, checkboxLabels, checkboxStates);
 
 			// For simplicity of the itemStateChanged() method below,
 			// is is best to keep the "Label all slices" checkbox in
