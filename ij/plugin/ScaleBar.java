@@ -190,21 +190,6 @@ public class ScaleBar implements PlugIn {
 	void persistConfiguration() {
 		sConfig.updateFrom(config);
 	}
-
-	/**
-	 * Create & draw the scalebar by editing pixels in the image.
-	 */
-	void createScaleBarDrawing(boolean previewOnly) {
-		if (previewOnly) {
-			drawScaleBarOnImageProcessor(imp.getProcessor());
-			imp.updateAndDraw();
-		} else {
-			ImageStack stack = imp.getStack();
-			for (int i=1; i<=stack.size(); i++)
-				drawScaleBarOnImageProcessor(stack.getProcessor(i));
-			imp.setStack(stack);
-		}
-	}
 	
 	/**
 	 * Return the X unit strings defined in the image calibration.
@@ -229,10 +214,8 @@ public class ScaleBar implements PlugIn {
 	/**
 	 * Create & draw the scalebar using an Overlay.
 	 */
-	void createScaleBarOverlay(boolean previewOnly) {
-		Overlay overlay = imp.getOverlay();
-		if (overlay==null)
-			overlay = new Overlay();
+	Overlay createScaleBarOverlay() {
+		Overlay overlay = new Overlay();
 
 		Color color = getColor();
 		Color bcolor = getBColor();
@@ -289,8 +272,7 @@ public class ScaleBar implements PlugIn {
 			}
 		}
 
-		imp.setOverlay(overlay);
-		// TODO use imp.drawOverlay() instead of the other method, will simplify everything a great deal!
+		return overlay;
 	}
 
 	Rectangle[] getElementsPosition(ImageProcessor ip) {
@@ -340,63 +322,6 @@ public class ScaleBar implements PlugIn {
 
 		Rectangle[] r = {hBackground, hBar, hText, vBackground, vBar, vText};
 		return r;
-	}
-	
-	/**
-	 * Draw the scalebar on pixels of the {ip} ImageProcessor.
-	 */
-	void drawScaleBarOnImageProcessor(ImageProcessor ip) {
-
-		Color color = getColor();
-		Color bcolor = getBColor();
-		
-		int fontType = config.boldText?Font.BOLD:Font.PLAIN;
-		String font = config.serifFont?"Serif":"SanSerif";
-		ip.setFont(new Font(font, fontType, config.fontSize));
-		ip.setAntialiasedText(true);
-
-		Rectangle[] r = getElementsPosition(ip);
-		Rectangle hBackground = r[0];
-		Rectangle hBar = r[1];
-		Rectangle hText = r[2];
-		Rectangle vBackground = r[3];
-		Rectangle vBar = r[4];
-		Rectangle vText = r[5];
-
-		if (bcolor != null) {
-			if (config.showHorizontal) {
-				ip.setColor(bcolor);
-				ip.setRoi(hBackground.x, hBackground.y, hBackground.width, hBackground.height);
-				ip.fill();
-				ip.resetRoi();
-			}
-			if (config.showVertical) {
-				ip.setColor(bcolor);
-				ip.setRoi(vBackground.x, vBackground.y, vBackground.width, vBackground.height);
-				ip.fill();
-				ip.resetRoi();
-			}
-		}
-
-		ip.setColor(color);
-		if (config.showHorizontal) {
-			ip.setRoi(hBar.x, hBar.y, hBar.width, hBar.height);
-			ip.fill();
-			ip.resetRoi();
-		}
-		if (config.showVertical) {
-			ip.setRoi(vBar.x, vBar.y, vBar.width, vBar.height);
-			ip.fill();
-			ip.resetRoi();
-		}
-
-		ip.setColor(color);
-		if (!config.hideText) {
-			if (config.showHorizontal)
-				ip.drawString(getHLabel(), hText.x, hText.y);
-			if (config.showVertical)
-				ip.drawString(getVLabel(), vText.x, vText.y);
-		}
 	}
 
 	/**
@@ -517,10 +442,30 @@ public class ScaleBar implements PlugIn {
 		} catch (MissingRoiException e) {
 			return; // Simply don't draw the scalebar.
 		}
-		if (config.useOverlay)
-			createScaleBarOverlay(previewOnly);
-		else
-			createScaleBarDrawing(previewOnly);
+
+		Overlay scaleBarOverlay = createScaleBarOverlay();
+		Overlay impOverlay = imp.getOverlay();
+		if (impOverlay==null) {
+			impOverlay = new Overlay();
+		}
+
+		if (config.useOverlay) {
+			for (Roi roi : scaleBarOverlay)
+				impOverlay.add(roi);
+			imp.setOverlay(impOverlay);
+		} else {
+			if (previewOnly) {
+				ImageProcessor ip = imp.getProcessor();
+				ip.drawOverlay(scaleBarOverlay);
+			} else {
+				ImageStack stack = imp.getStack();
+				for (int i=1; i<=stack.size(); i++) {
+					ImageProcessor ip = stack.getProcessor(i);
+					ip.drawOverlay(scaleBarOverlay);
+				}
+				imp.setStack(stack);
+			}
+		}
 	}
 
    class BarDialog extends GenericDialog {
