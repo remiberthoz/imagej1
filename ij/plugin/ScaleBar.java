@@ -174,20 +174,31 @@ public class ScaleBar implements PlugIn {
 		// Create & show the dialog, then return.
 		boolean multipleSlices = imp.getStackSize() > 1;
 		DialogListener dialogListener = (GenericDialog gd, AWTEvent e) -> {
-			gd.getNextNumber();
-			gd.getNextNumber();
-			gd.getNextNumber();
-			gd.getNextNumber();
-			gd.getNextChoice();
-			gd.getNextChoice();
-			gd.getNextChoice();
-			gd.getNextBoolean();
-			gd.getNextBoolean();
-			gd.getNextBoolean();
-			gd.getNextBoolean();
-			gd.getNextBoolean();
-			gd.getNextBoolean();
-			gd.getNextBoolean();
+			config.hBarWidth = gd.getNextNumber();
+			config.vBarHeight = gd.getNextNumber();
+			config.barThicknessInPixels = (int)gd.getNextNumber();
+			config.fontSize = (int)gd.getNextNumber();
+			config.color = gd.getNextChoice();
+			config.bcolor = gd.getNextChoice();
+			config.location = gd.getNextChoice();
+			config.showHorizontal = gd.getNextBoolean();
+			config.showVertical = gd.getNextBoolean();
+			config.boldText = gd.getNextBoolean();
+			config.hideText = gd.getNextBoolean();
+			config.serifFont = gd.getNextBoolean();
+			config.useOverlay = gd.getNextBoolean();
+			if (multipleSlices)
+				config.labelAll = gd.getNextBoolean();
+			if (!config.showHorizontal && !config.showVertical) {
+				// Previous versions of this plugin did not handle vertical scale bars:
+				// the macro syntax was different in that "height" meant "thickness" of
+				// the horizontal scalebar.
+				// If the conditional above is true, then the macro syntax is the old
+				// one, so we swap a few config variables.
+				config.showHorizontal = true;
+				config.barThicknessInPixels = (int)config.vBarHeight;
+				config.vBarHeight = 0.0;
+			}
 			return true;
 		};
 		GenericDialog dialog = new BarDialog(getHUnit(), getVUnit(), config.hDigits, config.vDigits, multipleSlices);
