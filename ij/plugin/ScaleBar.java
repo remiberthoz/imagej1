@@ -173,7 +173,25 @@ public class ScaleBar implements PlugIn {
 		
 		// Create & show the dialog, then return.
 		boolean multipleSlices = imp.getStackSize() > 1;
+		DialogListener dialogListener = (GenericDialog gd, AWTEvent e) -> {
+			gd.getNextNumber();
+			gd.getNextNumber();
+			gd.getNextNumber();
+			gd.getNextNumber();
+			gd.getNextChoice();
+			gd.getNextChoice();
+			gd.getNextChoice();
+			gd.getNextBoolean();
+			gd.getNextBoolean();
+			gd.getNextBoolean();
+			gd.getNextBoolean();
+			gd.getNextBoolean();
+			gd.getNextBoolean();
+			gd.getNextBoolean();
+			return true;
+		};
 		GenericDialog dialog = new BarDialog(getHUnit(), getVUnit(), config.hDigits, config.vDigits, multipleSlices);
+		dialog.addDialogListener(dialogListener);
 		dialog.showDialog();
 		return dialog.wasOKed();
 	}
