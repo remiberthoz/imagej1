@@ -166,6 +166,9 @@ public class ScaleBar implements PlugIn {
 		if (config.hBarWidth <= 0 || config.vBarHeight <= 0 || currentROIExists) {
 			computeDefaultBarWidth(currentROIExists);
 		}
+		if (IJ.macroRunning()) {
+			config.updateFrom(new ScaleBarConfiguration());
+		}
 
 		// Draw a first preview scalebar, with the default or presisted
 		// configuration.
