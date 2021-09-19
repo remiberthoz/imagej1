@@ -460,6 +460,7 @@ public class ScaleBar implements PlugIn {
 			if (previewOnly) {
 				ImageProcessor ip = imp.getProcessor();
 				ip.drawOverlay(scaleBarOverlay);
+				imp.draw();
 			} else {
 				ImageStack stack = imp.getStack();
 				for (int i=1; i<=stack.size(); i++) {
@@ -473,11 +474,8 @@ public class ScaleBar implements PlugIn {
 
    class BarDialog extends GenericDialog {
 
-		private boolean multipleSlices;
-
 		BarDialog(String hUnits, String vUnits, int hDigits, int vDigits, boolean multipleSlices) {
 			super("Scale Bar");
-			this.multipleSlices = multipleSlices;
 
 			addNumericField("Width in "+hUnits+": ", config.hBarWidth, hDigits);
 			addNumericField("Height in "+vUnits+": ", config.vBarHeight, vDigits);
@@ -500,76 +498,6 @@ public class ScaleBar implements PlugIn {
 				addCheckbox("Label all slices", config.labelAll);
 			}
 		}
-
-		public void textValueChanged(TextEvent e) {
-			TextField hWidthField = ((TextField)numberField.elementAt(0));
-			Double d = getValue(hWidthField.getText());
-			if (d==null)
-				return;
-			config.hBarWidth = d.doubleValue();
-			TextField vHeightField = ((TextField)numberField.elementAt(1));
-			d = getValue(vHeightField.getText());
-			if (d==null)
-				return;
-			config.vBarHeight = d.doubleValue();
-			TextField thicknessField = ((TextField)numberField.elementAt(2));
-			d = getValue(thicknessField.getText());
-			if (d==null)
-				return;
-			config.barThicknessInPixels = (int)d.doubleValue();
-			TextField fontSizeField = ((TextField)numberField.elementAt(3));
-			d = getValue(fontSizeField.getText());
-			if (d==null)
-				return;
-			int size = (int)d.doubleValue();
-			if (size>5)
-				config.fontSize = size;
-
-			String widthString = hWidthField.getText();
-			boolean hasDecimalPoint = false;
-			config.hDigits = 0;
-			for (int i = 0; i < widthString.length(); i++) {
-				if (hasDecimalPoint) {
-					config.hDigits += 1;
-				}
-				if (widthString.charAt(i) == '.') {
-					hasDecimalPoint = true;
-				}
-			}
-
-			String heightString = vHeightField.getText();
-			hasDecimalPoint = false;
-			config.vDigits = 0;
-			for (int i = 0; i < heightString.length(); i++) {
-				if (hasDecimalPoint) {
-					config.vDigits += 1;
-				}
-				if (heightString.charAt(i) == '.') {
-					hasDecimalPoint = true;
-				}
-			}
-
-			updateScalebar(true);
-		}
-
-		public void itemStateChanged(ItemEvent e) {
-			Choice col = (Choice)(choice.elementAt(0));
-			config.color = col.getSelectedItem();
-			Choice bcol = (Choice)(choice.elementAt(1));
-			config.bcolor = bcol.getSelectedItem();
-			Choice loc = (Choice)(choice.elementAt(2));
-			config.location = loc.getSelectedItem();
-			config.showHorizontal = ((Checkbox)(checkbox.elementAt(0))).getState();
-			config.showVertical = ((Checkbox)(checkbox.elementAt(1))).getState();
-			config.boldText = ((Checkbox)(checkbox.elementAt(2))).getState();
-			config.hideText = ((Checkbox)(checkbox.elementAt(3))).getState();
-			config.serifFont = ((Checkbox)(checkbox.elementAt(4))).getState();
-			config.useOverlay = ((Checkbox)(checkbox.elementAt(5))).getState();
-			if (multipleSlices)
-				config.labelAll = ((Checkbox)(checkbox.elementAt(6))).getState();
-			updateScalebar(true);
-		}
-
    } //BarDialog inner class
 
 	class BarDialogListener implements DialogListener {
@@ -608,6 +536,7 @@ public class ScaleBar implements PlugIn {
 				config.barThicknessInPixels = (int)config.vBarHeight;
 				config.vBarHeight = 0.0;
 			}
+			updateScalebar(true);
 			return true;
 		}
 	}
