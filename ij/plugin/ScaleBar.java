@@ -618,6 +618,27 @@ public class ScaleBar implements PlugIn {
 				config.barThicknessInPixels = (int)config.vBarHeight;
 				config.vBarHeight = 0.0;
 			}
+
+			String widthString = ((TextField) gd.getNumericFields().elementAt(0)).getText();
+			boolean hasDecimalPoint = false;
+			config.hDigits = 0;
+			for (int i = 0; i < widthString.length(); i++) {
+				if (hasDecimalPoint)
+					config.hDigits += 1;
+				if (widthString.charAt(i) == '.')
+					hasDecimalPoint = true;
+			}
+
+			String heightString = ((TextField) gd.getNumericFields().elementAt(1)).getText();
+			hasDecimalPoint = false;
+			config.vDigits = 0;
+			for (int i = 0; i < heightString.length(); i++) {
+				if (hasDecimalPoint)
+					config.vDigits += 1;
+				if (heightString.charAt(i) == '.')
+					hasDecimalPoint = true;
+			}
+
 			updateScalebar(true);
 			return true;
 		}
