@@ -608,7 +608,7 @@ public class ScaleBar implements PlugIn {
 			config.useOverlay = gd.getNextBoolean();
 			if (multipleSlices)
 				config.labelAll = gd.getNextBoolean();
-			if (!config.showHorizontal && !config.showVertical) {
+			if (!config.showHorizontal && !config.showVertical && IJ.macroRunning()) {
 				// Previous versions of this plugin did not handle vertical scale bars:
 				// the macro syntax was different in that "height" meant "thickness" of
 				// the horizontal scalebar.
