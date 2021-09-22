@@ -6,9 +6,11 @@ import java.awt.*;
 import ij.measure.*;
 import java.awt.event.*;
 
-/** This plugin implements the Analyze/Tools/Draw Scale Bar command.
-	Divakar Ramachandran added options to draw a background 
-	and use a serif font on 23 April 2006.
+/** This plugin implements the Analyze/Tools/Scale Bar command.
+ * Divakar Ramachandran added options to draw a background 
+ * and use a serif font on 23 April 2006.
+ * Remi Berthoz added an option to draw vertical scale
+ * bars on 17 September 2021.
 */
 public class ScaleBar implements PlugIn {
 
@@ -58,6 +60,7 @@ public class ScaleBar implements PlugIn {
 			return;
 		}
 
+		if (!IJ.isMacro())
 		persistConfiguration();
 		updateScalebar(!config.labelAll);
 	 }
@@ -602,6 +605,8 @@ public class ScaleBar implements PlugIn {
 			config.location = gd.getNextChoice();
 			config.showHorizontal = gd.getNextBoolean();
 			config.showVertical = gd.getNextBoolean();
+			if (!IJ.macroRunning() && !config.showHorizontal && !config.showVertical)
+				config.showHorizontal = true;
 			config.boldText = gd.getNextBoolean();
 			config.hideText = gd.getNextBoolean();
 			config.serifFont = gd.getNextBoolean();

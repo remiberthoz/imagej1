@@ -5,8 +5,17 @@
 </head>
 <body>
 
-<li> <u>1.53m20 5 September 2021</u>
+<li> <li> <u>1.53m33 22 September 2021</u>
 <ul>
+<li> Thanks to Remi Berthoz, the <i>Analyze&gt;Tools&gt;Scale Bar</i>
+command now has the ability to draw both vertical and/or
+horizontal scale bars.
+<li> Thanks to Stein Rorvik, added a "Colors..." command to the
+Color Picker dropdown menu and made most of the commands in
+that menu recordable. 
+<li> Thanks to Esteban Fernandez, added a "Fill color:"
+field to the <i>Image&gt;Stacks&gt;Images to Stack</i>
+dialog box.
 <li> Thanks to Barry DeZonia, the findMinAndMax() method 
 for the Short/Int/Float processors is now faster and
 the <i>Plugins&gt;Utilities&gt;Benchmark</i> command
@@ -59,6 +68,9 @@ number or a call to a user-defined function.
 <li> Thanks to Jerome Mutterer, fixed a typo in
 OpenDialog.java that caused the GitHub version of ImageJ
 to fail to compile.
+<li> Thanks to Daniel Nebdal, fixed a bug that caused the
+<i>Plugins&gt;Macros&gt;Edit</i> command to not open
+".py" and ".bsh" files.
 <li> Thanks to Ved Sharma, fixed a regression that caused the 
 roiManager(“Set Fill Color”,color) macro function to fail when
 used with a text selection.
@@ -68,6 +80,9 @@ FITS images to open flipped vertically.
 particle analyzer to not work the same as it did in ImageJ 1.52
 with binary images that were not thresholded and the "Black background"
 options was not set.
+<li> Thanks to Hyung-song Nam, fixed a 1.53f regression that caused
+menus to unexpectedly popup when using the "hand" tool to
+scroll through images.
 </ul>
 
 <li> <u>1.53k 6 July 2021</u>
