@@ -376,6 +376,8 @@ public class ScaleBar implements PlugIn {
 		hBarWidthInPixels = (int)(config.hBarWidth/cal.pixelWidth);
 		vBarHeightInPixels = (int)(config.vBarHeight/cal.pixelHeight);
 
+		boolean hTextTop = config.showVertical && (config.location.equals(locations[UPPER_LEFT]) || config.location.equals(locations[UPPER_RIGHT]));
+		
 		int imageWidth = imp.getWidth();
 		int imageHeight = imp.getHeight();
 		int hBoxWidth = getHBoxWidthInPixels();
@@ -391,10 +393,11 @@ public class ScaleBar implements PlugIn {
 		vBackground.height = innerMargin + vBoxHeight + innerMargin;
 
 		if (config.location.equals(locations[UPPER_RIGHT])) {
-			hBackground.x = imageWidth - outerMargin - innerMargin - vBoxWidth - hBoxWidth - innerMargin;
+			hBackground.x = imageWidth - outerMargin - innerMargin - vBoxWidth + (config.showVertical ? config.barThicknessInPixels : 0) - hBoxWidth - innerMargin;
 			hBackground.y = outerMargin;
 			vBackground.x = imageWidth - outerMargin - innerMargin - vBoxWidth - innerMargin;
-			vBackground.y = outerMargin;
+			vBackground.y = outerMargin + (hTextTop ? hBoxHeight - config.barThicknessInPixels : 0);
+			hBackground.width += (config.showVertical ? vBoxWidth - config.barThicknessInPixels : 0);
 
 		} else if (config.location.equals(locations[LOWER_RIGHT])) {
 			hBackground.x = imageWidth - outerMargin - innerMargin - vBoxWidth - hBoxWidth + (config.showVertical ? config.barThicknessInPixels : 0) - innerMargin;
@@ -404,16 +407,19 @@ public class ScaleBar implements PlugIn {
 			vBackground.height += (config.showHorizontal ? hBoxHeight - config.barThicknessInPixels : 0);
 
 		} else if (config.location.equals(locations[UPPER_LEFT])) {
-			hBackground.x = outerMargin;
+			hBackground.x = outerMargin + (config.showVertical ? vBackground.width - 2*innerMargin - config.barThicknessInPixels : 0);
 			hBackground.y = outerMargin;
 			vBackground.x = outerMargin;
-			vBackground.y = outerMargin;
+			vBackground.y = outerMargin + (hTextTop ? hBoxHeight - config.barThicknessInPixels : 0);
+			hBackground.width += (config.showVertical ? vBoxWidth - config.barThicknessInPixels : 0);
+			hBackground.x -= (config.showVertical ? vBoxWidth - config.barThicknessInPixels : 0);
 
 		} else if (config.location.equals(locations[LOWER_LEFT])) {
-			hBackground.x = outerMargin;
+			hBackground.x = outerMargin + (config.showVertical ? vBackground.width - 2*innerMargin - config.barThicknessInPixels : 0);
 			hBackground.y = imageHeight - outerMargin - innerMargin - hBoxHeight - innerMargin;
 			vBackground.x = outerMargin;
 			vBackground.y = imageHeight - outerMargin - innerMargin - hBoxHeight + (config.showHorizontal ? config.barThicknessInPixels : 0) - vBoxHeight - innerMargin;
+			vBackground.height += (config.showHorizontal ? hBoxHeight - config.barThicknessInPixels : 0);
 
 		} else {
 			if (!userRoiExists)
@@ -445,25 +451,29 @@ public class ScaleBar implements PlugIn {
 		int vBoxHeight = getVBoxHeightInPixels();
 
 		int innerMargin = getInnerMarginSizeInPixels();
+
+		boolean right = config.location.equals(locations[LOWER_RIGHT]) || config.location.equals(locations[UPPER_RIGHT]);
+		boolean upper = config.location.equals(locations[UPPER_RIGHT]) || config.location.equals(locations[UPPER_LEFT]);
+		boolean hTextTop = config.showVertical && upper;
 		
-		hBar.x = hBackground.x + innerMargin + (hBoxWidth - hBarWidthInPixels)/2;
-		hBar.y = hBackground.y + innerMargin;
+		hBar.x = hBackground.x + innerMargin + (hBoxWidth - hBarWidthInPixels)/2 + (config.showVertical && !right && upper ? vBoxWidth - config.barThicknessInPixels : 0);
+		hBar.y = hBackground.y + innerMargin + (hTextTop ? hBoxHeight - config.barThicknessInPixels : 0);
 		hBar.width = hBarWidthInPixels;
 		hBar.height = config.barThicknessInPixels;
 
 		hText.height = config.hideText ? 0 : config.fontSize;
 		hText.width = config.hideText ? 0 : ip.getStringWidth(getHLabel());
-		hText.x = hBackground.x + innerMargin + (hBoxWidth - hText.width)/2;
-		hText.y = hBar.y + hBar.height;
+		hText.x = hBackground.x + innerMargin + (hBoxWidth - hText.width)/2 + (config.showVertical && !right && upper ? vBoxWidth - config.barThicknessInPixels : 0);
+		hText.y = hTextTop ? (hBackground.y + innerMargin) : (hBar.y + hBar.height);
 
 		vBar.width = config.barThicknessInPixels;
 		vBar.height = vBarHeightInPixels;
-		vBar.x = vBackground.x + innerMargin;
+		vBar.x = vBackground.x + (right ? innerMargin : vBackground.width - config.barThicknessInPixels - innerMargin);
 		vBar.y = vBackground.y + innerMargin + (vBoxHeight - vBar.height)/2;
 
 		vText.height = config.hideText ? 0 : ip.getStringWidth(getVLabel());
 		vText.width = config.hideText ? 0 : config.fontSize;
-		vText.x = vBar.x + vBar.width;
+		vText.x = right ? (vBar.x + vBar.width) : (vBar.x - vBoxWidth + config.barThicknessInPixels);
 		vText.y = vBackground.y + innerMargin + (vBoxHeight - vText.height)/2;
 	}
 
