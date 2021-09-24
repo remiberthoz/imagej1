@@ -547,13 +547,40 @@ public class ScaleBar implements PlugIn {
 			processor.drawOverlay(overlay);
 			return;
 		}
+		// Generate a buffer ImageProcessor, completely black.
+		// We will draw the overlay on it, then loop over each pixel,
+		// to replace drawn pixels in the original processor.
 		ImageProcessor ip = new ByteProcessor(imp.getWidth(), imp.getHeight());
+		ip.setCalibrationTable(processor.getCalibrationTable());
+		LUT lut = ip.getLut();
+		for (Roi roi : overlay) {
+			Color fillColor = roi.getFillColor();
+			if (fillColor != null) {
+				int i = processor.getBestIndex(fillColor);
+				roi.setFillColor(new Color(lut.getRed(i), lut.getGreen(i), lut.getBlue(i)));
+			}
+			Color strokeColor = roi.getStrokeColor();
+			if (strokeColor != null) {
+				int i = processor.getBestIndex(strokeColor);
+				roi.setStrokeColor(new Color(lut.getRed(i), lut.getGreen(i), lut.getBlue(i)));
+			}
+			// Below, when looping on each pixel of the buffer, we detect whether it was
+			// drawn by checking if the pixel value is greater than zero. Hence, we cannot
+			// put zero-valued pixels when the Roi is black, or these pixels will not
+			// be part of the drawing.
+			if (roi.getStrokeColor() == Color.BLACK) roi.setStrokeColor(new Color(1, 1, 1));
+			if (roi.getFillColor() == Color.BLACK) roi.setFillColor(new Color(1, 1, 1));
+		}
 		ip.drawOverlay(overlay);
 		for (int y = 0; y < ip.getHeight(); y++)
 			for (int x = 0; x < ip.getWidth(); x++) {
 				int p = ip.get(x, y);
-				if (p > 0)
-					processor.putPixelValue(x, y, p / 255. * (processor.getMax() - processor.getMin()) + processor.getMin());
+				if (p > 0) {
+					p = (int) (p * ((processor.getMax() - processor.getMin()) / 255d) + (float)processor.getMin());
+					if (processor.getBitDepth() == 32)
+						p = Float.floatToIntBits(p);
+					processor.putPixel(x, y, p);
+				}
 			}
 	}
 
