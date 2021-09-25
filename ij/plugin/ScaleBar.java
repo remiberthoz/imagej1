@@ -568,18 +568,18 @@ public class ScaleBar implements PlugIn {
 			if (fillColor != null) {
 				int i = processor.getBestIndex(fillColor);
 				roi.setFillColor(new Color(lut.getRed(i), lut.getGreen(i), lut.getBlue(i)));
+				// Below, when looping on each pixel of the buffer, we detect whether it was
+				// drawn by checking if the pixel value is greater than zero. Hence, we cannot
+				// put zero-valued pixels when the Roi is black, or these pixels will not
+				// be part of the drawing.
+				if (roi.getFillColor().equals(Color.BLACK)) roi.setFillColor(new Color(1, 1, 1));
 			}
 			Color strokeColor = roi.getStrokeColor();
 			if (strokeColor != null) {
 				int i = processor.getBestIndex(strokeColor);
 				roi.setStrokeColor(new Color(lut.getRed(i), lut.getGreen(i), lut.getBlue(i)));
+				if (roi.getStrokeColor().equals(Color.BLACK)) roi.setStrokeColor(new Color(1, 1, 1));
 			}
-			// Below, when looping on each pixel of the buffer, we detect whether it was
-			// drawn by checking if the pixel value is greater than zero. Hence, we cannot
-			// put zero-valued pixels when the Roi is black, or these pixels will not
-			// be part of the drawing.
-			if (roi.getStrokeColor() == Color.BLACK) roi.setStrokeColor(new Color(1, 1, 1));
-			if (roi.getFillColor() == Color.BLACK) roi.setFillColor(new Color(1, 1, 1));
 		}
 		ip.drawOverlay(overlay);
 		for (int y = 0; y < ip.getHeight(); y++)
