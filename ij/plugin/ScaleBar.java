@@ -207,7 +207,7 @@ public class ScaleBar implements PlugIn {
 	 * Return the X unit strings defined in the image calibration.
 	 */
 	String getHUnit() {
-		String hUnits = imp.getCalibration().getXUnit();
+		String hUnits = imp.getCalibration().getXUnits();
 		if (hUnits.equals("microns"))
 			hUnits = IJ.micronSymbol+"m";
 		return hUnits;
@@ -217,7 +217,7 @@ public class ScaleBar implements PlugIn {
 	 * Return the Y unit strings defined in the image calibration.
 	 */
 	String getVUnit() {
-		String vUnits = imp.getCalibration().getYUnit();
+		String vUnits = imp.getCalibration().getYUnits();
 		if (vUnits.equals("microns"))
 			vUnits = IJ.micronSymbol+"m";
 		return vUnits;
