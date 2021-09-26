@@ -464,7 +464,7 @@ public class ScaleBar implements PlugIn {
 		hText.height = config.hideText ? 0 : config.fontSize;
 		hText.width = config.hideText ? 0 : ip.getStringWidth(getHLabel());
 		hText.x = hBackground.x + innerMargin + (hBoxWidth - hText.width)/2 + (config.showVertical && !right && upper ? vBoxWidth - config.barThicknessInPixels : 0);
-		hText.y = hTextTop ? (hBackground.y + innerMargin) : (hBar.y + hBar.height);
+		hText.y = hTextTop ? (hBackground.y + innerMargin - (int)(config.fontSize*0.25)) : (hBar.y + hBar.height);
 
 		vBar.width = config.barThicknessInPixels;
 		vBar.height = vBarHeightInPixels;
@@ -473,7 +473,7 @@ public class ScaleBar implements PlugIn {
 
 		vText.height = config.hideText ? 0 : ip.getStringWidth(getVLabel());
 		vText.width = config.hideText ? 0 : config.fontSize;
-		vText.x = right ? (vBar.x + vBar.width) : (vBar.x - vBoxWidth + config.barThicknessInPixels);
+		vText.x = right ? (vBar.x + vBar.width) : (vBar.x - vBoxWidth + config.barThicknessInPixels - (int)(config.fontSize*0.25));
 		vText.y = vBackground.y + innerMargin + (vBoxHeight - vText.height)/2;
 	}
 
